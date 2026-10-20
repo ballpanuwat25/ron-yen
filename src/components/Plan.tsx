@@ -1,8 +1,13 @@
-import { placeName, placeTemp, round, type Place, type Stay } from '@/content/site';
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { placeName, placeTemp, round } from '@/content/site';
+import { whereAt } from '@/lib/walk';
 
 // The studio from above, drawn in the page's thin cream line: reception, changing rooms, sauna, showers,
-// the four tubs and the deck, with the one-way route through them. Three dots are the three ways to spend the
-// time, each in the room it is in at `minute`. This is the still; scrolling will move the minute later.
+// the four tubs and the deck, with the one-way route through them. Three dots are the three ways to spend
+// a session. The section holds still while you scroll through it, and the scroll is the clock: 75 minutes
+// from the top of the section to the bottom, the dots walking from room to room as the minutes pass.
 
 type Rect = { x: number; y: number; w: number; h: number };
 const ROOM: Record<'sauna' | 'rinse' | 'ice' | 'deck' | 'lockers' | 'reception', Rect> = {
@@ -14,39 +19,149 @@ const ROOM: Record<'sauna' | 'rinse' | 'ice' | 'deck' | 'lockers' | 'reception',
   reception: { x: 40, y: 370, w: 110, h: 190 },
 };
 
-// where each way stands in a room, so the three dots never sit on one another
-const SPOT: Record<Exclude<Place, 'loyly'>, [number, number][]> = {
-  sauna: [[150, 120], [230, 120], [310, 120]],
-  rinse: [[470, 110], [530, 110], [500, 200]],
-  ice: [[650, 108], [760, 238], [650, 238]],
-  deck: [[560, 465], [690, 495], [820, 465]],
-  out: [[70, 500], [95, 530], [120, 500]],
-};
+const noteAt = (m: number) => [...round.notes].reverse().find((n) => m >= n.at) ?? round.notes[0];
 
-// the same, on the portrait plan phones get
-const SPOT_TALL: Record<Exclude<Place, 'loyly'>, [number, number][]> = {
-  sauna: [[110, 405], [200, 435], [290, 405]],
-  rinse: [[110, 540], [290, 540], [200, 552]],
-  ice: [[70, 690], [330, 690], [150, 690]],
-  deck: [[100, 870], [200, 905], [300, 870]],
-  out: [[100, 112], [150, 122], [270, 112]],
-};
+export default function Plan() {
+  // the minute as the text and the list show it, a quarter-minute at a time; the dots and the frame
+  // move every frame in the loop below, without React
+  const [minute, setMinute] = useState(0);
+  const [pick, setPick] = useState<number | null>(null);
+  const pickRef = useRef<number | null>(null);
+  pickRef.current = pick;
+  const trackRef = useRef<HTMLDivElement>(null);
+  const camRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const dotRefs = useRef<(SVGGElement | null)[]>([]);
+  const markRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-function placeAt(stays: readonly Stay[], m: number): Place {
-  let t = 0;
-  for (const [place, mins] of stays) { t += mins; if (m < t) return place; }
-  return stays[stays.length - 1][0];
-}
+  // One loop moves everything, so the dots, the frame and the edge markers are always drawn from the same
+  // instant and can never fall a frame out of step with each other.
+  useEffect(() => {
+    const frame = camRef.current, svg = svgRef.current;
+    if (!frame || !svg) return;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let raf = 0, prev = performance.now(), shown = 0, first = true;
+    const cam = { x: 0, y: 0, s: 1 }, vel = { x: 0, y: 0, s: 0 };
+    const glide: { x: number; y: number }[] = [];
 
-export default function Plan({ minute = 11.5 }: { minute?: number }) {
-  const now = round.ways.map((w, i) => {
-    const place = placeAt(w.stays, minute);
-    const spot = place === 'loyly' ? 'sauna' : place;
-    const [x, y] = SPOT[spot][i];
-    const [tx, ty] = SPOT_TALL[spot][i];
-    return { ...w, place, x, y, tx, ty };
-  });
+    const tick = (now: number) => {
+      const dt = Math.min(64, now - prev); prev = now;
+
+      // The scroll is the clock: the top of the track is minute 0, the bottom minute 75. The clock eases
+      // toward where the scroll is rather than jumping a wheel notch at a time.
+      const track = trackRef.current!.getBoundingClientRect();
+      const goal = Math.min(1, Math.max(0, -track.top / (track.height - innerHeight))) * round.minutes;
+      shown = first || reduced || Math.abs(goal - shown) < .02 ? goal : shown + (goal - shown) * (1 - Math.exp(-dt / 220));
+      const q = Math.round(shown * 4) / 4;
+      setMinute((m) => (m === q ? m : q));
+
+      // the guests, walking through the doors between rooms
+      const ways = round.ways.map((w, i) => whereAt(w.stays, shown, i));
+      ways.forEach((p, i) => {
+        const g = dotRefs.current[i];
+        if (!g) return;
+        g.setAttribute('transform', `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)})`);
+        g.style.opacity = String(1 - p.gone);
+        g.style.pointerEvents = p.gone >= 1 ? 'none' : '';
+      });
+      // a tapped guest stays followed until tapped again, or until they leave the studio
+      if (pickRef.current !== null && ways[pickRef.current].gone >= 1) { pickRef.current = null; setPick(null); }
+
+      // On a phone the frame follows the whole-morning guest, who keeps moving through every room to the
+      // end, unless another guest has been tapped. On a wide screen the whole plan is in view and the frame
+      // never moves.
+      const phone = getComputedStyle(frame).overflow === 'hidden';
+      const W = frame.clientWidth, H = frame.clientHeight, unit = W / 1000;
+      const aim = [pickRef.current ?? 1];
+      let to = { x: 0, y: 0, s: 1 };
+      if (phone && aim.length) {
+        const xs = aim.map((i) => ways[i].x), ys = aim.map((i) => ways[i].y), pad = 150;
+        const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+        const s = Math.max(1, Math.min(2.2, W / ((x1 - x0 + pad * 2) * unit), H / ((y1 - y0 + pad * 2) * unit)));
+        const clamp = (v: number, max: number) => (max <= 0 ? max / 2 : Math.max(0, Math.min(max, v)));
+        to = { s, x: clamp((x0 + x1) / 2 * unit * s - W / 2, 1000 * unit * s - W), y: clamp((y0 + y1) / 2 * unit * s - H / 2, 620 * unit * s - H) };
+      }
+      // The frame moves on a critically damped spring: it sets off gently, glides, and settles without
+      // overshooting, where a plain ease would lurch at the start of every move.
+      if (first) { cam.x = to.x; cam.y = to.y; cam.s = to.s; }
+      const w = 5.5, h = dt / 1000;
+      for (const key of ['x', 'y', 's'] as const) {
+        const a = w * w * (to[key] - cam[key]) - 2 * w * vel[key];
+        vel[key] += a * h; cam[key] += vel[key] * h;
+      }
+      svg.style.transform = phone ? `translate(${-cam.x}px, ${-cam.y}px) scale(${cam.s})` : '';
+      // while the frame makes a long move (to a newly tapped guest) the markers step aside, and come back
+      // once it has arrived; following a guest across a room is not a long move, so they stay
+      const travelling = Math.hypot(to.x - cam.x, to.y - cam.y) > 90;
+
+      // Anyone out of the frame gets a drop pinned to the edge nearest them, its point toward them. It
+      // shows only once the dot is wholly out of view and goes only once the dot is well back in, so a
+      // guest at the edge never shows twice or blinks; it glides along the edge rather than jumping, and
+      // two guests off the same edge are stepped apart.
+      const r = 13 * unit * cam.s + 3;
+      const flagged: { i: number; el: HTMLButtonElement; sx: number; sy: number; mx: number; my: number; side: string; was: boolean }[] = [];
+      ways.forEach((p, i) => {
+        const el = markRefs.current[i];
+        if (!el) return;
+        const sx = p.x * unit * cam.s - cam.x, sy = p.y * unit * cam.s - cam.y;
+        const was = el.dataset.out === '1';
+        const beyond = (m: number) => sx < -m || sx > W + m || sy < -m || sy > H + m;
+        // the guest the frame is following never has a marker: the frame is already on its way to them,
+        // so their marker goes at once, without fading, the moment they are tapped
+        const followed = aim.includes(i);
+        let out = phone && p.gone < 1 && !followed && !travelling && (was ? beyond(-r - 24) : beyond(r + 4));
+        // A marker goes at once, with only the quickest fade. Coming back is what waits: one that has just
+        // gone may not return for a moment, so nothing can flick it on and off.
+        if (out && !was && now - Number(el.dataset.since || 0) < 600) out = false;
+        if (out !== was) {
+          el.dataset.out = out ? '1' : '0'; el.dataset.since = String(now);
+          el.style.transition = out ? 'opacity .25s' : followed ? 'none' : 'opacity .08s';
+          el.style.opacity = out ? '1' : '0'; el.style.pointerEvents = out ? 'auto' : 'none';
+        }
+        if (!out) return;
+        const mx = Math.max(18, Math.min(W - 18, sx)), my = Math.max(18, Math.min(H - 18, sy));
+        const side = mx <= 18 ? 'l' : mx >= W - 18 ? 'r' : my <= 18 ? 't' : 'b';
+        flagged.push({ i, el, sx, sy, mx, my, side, was });
+      });
+      // Markers on the same edge that would touch are laid out as one group, side by side about the
+      // group's middle and always in the guests' order, so none of them hops past another as things move.
+      for (const side of ['l', 'r', 't', 'b']) {
+        const row = flagged.filter((m) => m.side === side);
+        const vertical = side === 'l' || side === 'r';
+        const at = (m: (typeof row)[number]) => (vertical ? m.my : m.mx);
+        row.sort((a, b2) => at(a) - at(b2) || a.i - b2.i);
+        const groups: (typeof row)[] = [];
+        for (const m of row) {
+          const g = groups[groups.length - 1];
+          if (g && at(m) - at(g[g.length - 1]) < 36) g.push(m); else groups.push([m]);
+        }
+        for (const g of groups) {
+          g.sort((a, b2) => a.i - b2.i);
+          const mid = g.reduce((t, m) => t + at(m), 0) / g.length, max = (vertical ? H : W) - 18;
+          const start = Math.max(18, Math.min(max - 36 * (g.length - 1), mid - 18 * (g.length - 1)));
+          g.forEach((m, k) => { if (vertical) m.my = start + 36 * k; else m.mx = start + 36 * k; });
+        }
+      }
+      for (const { i, el, sx, sy, mx, my, was } of flagged) {
+        const g = glide[i] ?? (glide[i] = { x: mx, y: my });
+        if (!was) { g.x = mx; g.y = my; }
+        g.x += (mx - g.x) * .2; g.y += (my - g.y) * .2;
+        el.style.transform = `translate(${g.x}px, ${g.y}px)`;
+        // the drop's point turns toward the guest it stands for
+        el.style.setProperty('--a', `${Math.atan2(sy - g.y, sx - g.x) * 180 / Math.PI + 90}deg`);
+      }
+
+      first = false;
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  const now = round.ways.map((w, i) => ({ ...w, ...whereAt(w.stays, minute, i) }));
   const loyly = now.some((w) => w.place === 'loyly');
+  const note = noteAt(minute);
+  const shownMinute = minute > round.minutes - .5 ? round.minutes : Math.floor(minute);
 
   return (
     <section className="plan" id="round">
@@ -55,8 +170,11 @@ export default function Plan({ minute = 11.5 }: { minute?: number }) {
         <p>{round.text}</p>
       </div>
 
+      <div className="plan-track" ref={trackRef}>
+      <div className="plan-pin">
       <div className="plan-body">
-        <svg className="plan-map plan-wide" viewBox="0 0 1000 620" role="img" aria-label="Plan of the studio: reception, changing rooms, sauna, showers, four ice baths outside and the deck">
+        <div className="plan-cam" ref={camRef}>
+        <svg className="plan-map" ref={svgRef} viewBox="0 0 1000 620" role="img" aria-label="Plan of the studio: reception, changing rooms, sauna, showers, four ice baths outside and the deck">
           {/* rooms; the tubs and the deck are outside, behind a fence rather than a wall */}
           <g className={`room room-sauna${loyly ? ' is-loyly' : ''}`}>
             <rect {...box(ROOM.sauna)} />
@@ -136,28 +254,45 @@ export default function Plan({ minute = 11.5 }: { minute?: number }) {
 
           {/* the three ways, where they are now */}
           {now.map((w, i) => (
-            <g key={w.id} className="who" transform={`translate(${w.x} ${w.y})`}>
+            <g key={w.id} className={`who${pick === i ? ' is-picked' : ''}`} ref={(el) => { dotRefs.current[i] = el; }}
+              onClick={() => setPick(pick === i ? null : i)}>
+              {/* a larger, invisible target for a finger */}
+              <circle r="30" className="hit" />
               <circle r="13" />
               <text className="n" y="5" textAnchor="middle">{i + 1}</text>
             </g>
           ))}
         </svg>
-
-        <TallPlan now={now} loyly={loyly} />
+        {now.map((w, i) => (
+          <button key={w.id} type="button" className={`edge${pick === i ? ' is-picked' : ''}`} ref={(el) => { markRefs.current[i] = el; }} tabIndex={-1}
+            aria-label={`Follow ${w.name}`} onClick={() => setPick(pick === i ? null : i)}>
+            {/* the drop's round part is centred on the number and its point drawn at the top; the marker turns it toward the guest */}
+            <svg viewBox="-17 -17 34 34" aria-hidden="true"><path d="M0 -21 C4 -14 12 -8 12 0 A12 12 0 0 1 -12 0 C-12 -8 -4 -14 0 -21 Z" /></svg>
+            <b>{i + 1}</b>
+          </button>
+        ))}
+        </div>
 
         <aside className="plan-now">
-          <div className="clock"><b>{Math.floor(minute)}</b><span>of {round.minutes} min</span></div>
+          <div className="clock"><b>{shownMinute}</b><span>of {round.minutes} min</span></div>
+          <p className="plan-note">{note.text}</p>
+          <p className="plan-hint"><span className="w">{round.hint.wide}</span><span className="n">{round.hint.narrow}</span></p>
           <ul>
             {now.map((w, i) => (
-              <li key={w.id}>
-                <i>{i + 1}</i>
-                <b>{w.name}</b>
-                <span>{w.note}</span>
-                <em>{placeName[w.place]}{w.place !== 'out' && ` · ${placeTemp[w.place]}°`}</em>
+              <li key={w.id} className={[w.place === 'out' && 'is-gone', pick === i && 'is-picked'].filter(Boolean).join(' ') || undefined}>
+                {/* tap to have the frame follow this guest; tap again to go back to the story */}
+                <button type="button" aria-pressed={pick === i} onClick={() => setPick(pick === i ? null : i)}>
+                  <i>{i + 1}</i>
+                  <b>{w.name}</b>
+                  <span>{w.note}</span>
+                  <em>{placeName[w.place]}{w.place !== 'out' && ` · ${placeTemp[w.place]}°`}</em>
+                </button>
               </li>
             ))}
           </ul>
         </aside>
+      </div>
+      </div>
       </div>
     </section>
   );
@@ -205,41 +340,3 @@ const up = (x: number, y: number) => `M${x - 5} ${y + 6} l5 -6 5 6`;
 const down = (x: number, y: number) => `M${x - 5} ${y - 6} l5 6 5 -6`;
 const right = (x: number, y: number) => `M${x - 6} ${y - 5} l6 5 -6 5`;
 const left = (x: number, y: number) => `M${x + 6} ${y - 5} l-6 5 6 5`;
-
-// Phones get the same studio redrawn in portrait, the rooms stacked in the order you walk through them,
-// with only what the story needs: rooms, the two doors, the tubs, the route and the three dots.
-function TallPlan({ now, loyly }: { now: { id: string; tx: number; ty: number }[]; loyly: boolean }) {
-  const room = (y: number, h: number, extra = '') => <rect x="20" y={y} width="360" height={h} rx="6" className={`shell ${extra}`} />;
-  return (
-    <svg className="plan-map plan-tall" viewBox="0 0 400 990" role="img" aria-label="Plan of the studio, from the street door to the deck">
-      <text x="20" y="22" className="lbl-sm">Way in, from Soi Ari 7</text>
-
-      <g className="room room-reception">{room(40, 100)}<text x="34" y="68">Reception</text><text x="34" y="90" className="lbl-sm">check in, towels</text></g>
-      <g className="room room-lockers">{room(170, 100)}<text x="34" y="198">Changing rooms</text><text x="34" y="220" className="lbl-sm">lockers, WC</text></g>
-      <g className={`room room-sauna${loyly ? ' is-loyly' : ''}`}>{room(300, 170)}<text x="34" y="328">Sauna {placeTemp.sauna}°</text>
-        <circle cx="340" cy="430" r="20" className="stove" /></g>
-      <g className="room room-rinse">{room(500, 70)}<text x="34" y="526">Showers</text></g>
-      <g className="room room-ice outdoor">{room(600, 160)}<text x="34" y="628">Ice baths {placeTemp.ice}°, outside</text>
-        {[70, 150, 250, 330].map((x) => <circle key={x} cx={x} cy="690" r="30" className="tub" />)}</g>
-      <g className="room room-deck outdoor">{room(790, 170)}<text x="34" y="818">Deck {placeTemp.deck}°, tea</text>
-        <rect x="200" y="798" width="172" height="154" className="roof" /></g>
-
-      {/* the street door and the sauna door; everything else is a gap */}
-      <Door hinge={[180, 40]} leaf={[0, 36]} shut={[40, 0]} sweep={0} />
-      <Door hinge={[180, 300]} leaf={[0, 36]} shut={[40, 0]} sweep={0} />
-      {[[180, 140, 220, 140], [180, 170, 220, 170], [180, 270, 220, 270], [180, 470, 220, 470], [180, 500, 220, 500],
-        [180, 570, 220, 570], [180, 600, 220, 600], [180, 760, 220, 760], [180, 790, 220, 790], [380, 860, 380, 900], [380, 370, 380, 410]]
-        .map(([x1, y1, x2, y2], k) => <line key={k} x1={x1} y1={y1} x2={x2} y2={y2} className="doorway" />)}
-
-      <path className="route" d="M200 28 V32 M200 84 V160 M200 186 V290 M200 344 V492 M200 516 V592 M200 624 V782 M372 880 H392 V390 H386" />
-      <path className="route-arrow" d={[down(200, 32), down(200, 160), down(200, 290), down(200, 492), down(200, 592), down(200, 782), left(386, 390)].join(' ')} />
-
-      {now.map((w, i) => (
-        <g key={w.id} className="who" transform={`translate(${w.tx} ${w.ty})`}>
-          <circle r="15" />
-          <text className="n" y="6" textAnchor="middle">{i + 1}</text>
-        </g>
-      ))}
-    </svg>
-  );
-}

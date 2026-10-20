@@ -99,6 +99,7 @@ export const round = {
   heading: 'Three ways to spend the time',
   text: 'Nobody times you. Some come after work for two slow rounds and a pot of tea, some make a morning of it, some only want the ice before the office.',
   minutes: 75,
+  hint: { wide: 'Click a name to find them on the plan', narrow: 'Tap a name to follow them' },
   ways: [
     {
       id: 'unwind', name: 'After work', note: 'Two rounds, then tea', kind: 'social',
@@ -117,7 +118,7 @@ export const round = {
   // what is happening, shown as the minutes pass
   notes: [
     { at: 0, text: 'Everyone starts at the same time. The plunge-only guest goes straight to the tubs while the bench fills.' },
-    { at: 10.5, text: 'The first plunge after the sauna. One minute is plenty the first time.' },
+    { at: 9, text: 'Ice, a sit on the deck, ice again: three plunges in twenty-five minutes, while the others are still on the bench.' },
     { at: 25, text: 'The plunge-only guest is dressed and gone, twenty-five minutes after arriving.' },
     { at: 26, text: 'Someone ladles water on the stones, and the heat climbs for a minute.' },
     { at: 38, text: 'After two rounds, out on the deck for good, with a pot of tea.' },

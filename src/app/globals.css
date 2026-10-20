@@ -91,7 +91,33 @@ img { display: block; max-width: 100%; }
 .plan-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 40px; margin-bottom: 40px; }
 .plan h2 { margin: 0; font: 300 clamp(34px, 4.2vw, 60px)/1.04 var(--serif); letter-spacing: -.015em; }
 .plan-head p { margin: 0; max-width: 30em; color: var(--cream-soft); font-size: 15px; }
-.plan-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: clamp(24px, 4vw, 56px); align-items: start; }
+/* the section holds still while the scroll runs the 75 minutes through it */
+.plan-track { position: relative; height: 640vh; }
+.plan-pin { position: sticky; top: 0; height: 100svh; display: flex; align-items: center; }
+.plan-body { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: clamp(24px, 4vw, 56px); align-items: center; }
+.plan-note { margin: 14px 0 4px; font: 300 16px/1.45 var(--thai); color: var(--cream); min-height: 4.4em; }
+.plan-map .who { transition: none; }
+.plan-now li { transition: opacity .4s; }
+.plan-now li.is-gone { opacity: .4; }
+/* the frame on a phone: the plan moves inside it, and anyone out of view is pinned to its edge */
+.plan-cam { position: relative; }
+/* a marker for a guest out of frame: the studio's drop, its point turned toward them, their number inside */
+.plan-cam .edge { all: unset; position: absolute; left: 0; top: 0; width: 34px; height: 34px; margin: -17px 0 0 -17px;
+  display: grid; place-items: center; color: var(--night); font: 600 12px/1 var(--sans); opacity: 0; cursor: pointer;
+  transition: opacity .25s; pointer-events: none; }
+.plan-cam .edge svg { position: absolute; inset: 0; width: 34px; height: 34px; overflow: visible; transform: rotate(var(--a, 0deg));
+  filter: drop-shadow(0 0 3px rgba(23, 9, 5, .7)); }
+.plan-cam .edge svg path { fill: var(--cream); }
+.plan-cam .edge b { position: relative; font-weight: 600; }
+.plan-cam .edge.is-picked svg path { fill: var(--ember); }
+.plan-cam .edge.is-picked b { color: var(--cream); }
+.plan-map .who { cursor: pointer; }
+.plan-map .who .hit { fill: transparent; stroke: none; }
+.plan-map .who.is-picked circle:not(.hit) { stroke: var(--ember); stroke-width: 4; }
+.plan-hint { margin: 12px 0 0; font-size: 12px; letter-spacing: .03em; color: var(--cream-soft); display: flex; align-items: center; gap: 8px; }
+.plan-hint .n { display: none; }
+.plan-hint::before { content: ''; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--ember); }
+.plan-now li button:hover b { text-decoration: underline; text-decoration-color: var(--ember); text-underline-offset: 4px; }
 
 .plan-map { display: block; width: 100%; height: auto; overflow: visible; }
 .plan-map .room > rect:first-child { fill: rgba(247, 236, 226, .03); stroke: var(--line); stroke-width: 1.2; }
@@ -137,25 +163,34 @@ img { display: block; max-width: 100%; }
 .plan-now .clock b { font: 200 72px/1 var(--serif); font-variant-numeric: tabular-nums; }
 .plan-now .clock span { font-size: 13px; color: var(--cream-soft); }
 .plan-now ul { list-style: none; margin: 0; padding: 0; }
-.plan-now li { display: grid; grid-template-columns: 30px 1fr; gap: 2px 10px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.plan-now li { border-bottom: 1px solid var(--line); }
+.plan-now li button { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid; grid-template-columns: 30px 1fr; gap: 2px 10px; padding: 14px 0; }
+.plan-now li button:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
+.plan-now li.is-picked i { background: var(--ember); color: var(--cream); }
 .plan-now li i { grid-row: span 3; width: 24px; height: 24px; border-radius: 50%; background: var(--cream); color: var(--night);
   font: 500 13px/24px var(--sans); font-style: normal; text-align: center; }
 .plan-now li b { font: 300 20px/1.2 var(--serif); }
 .plan-now li span { font-size: 12px; color: var(--cream-soft); }
 .plan-now li em { font: 300 15px/1.4 var(--thai); font-style: normal; margin-top: 4px; }
 
-/* phones get the portrait plan; it carries larger type in its own drawing */
-.plan-tall { display: none; }
-.plan-tall .shell { fill: rgba(247, 236, 226, .03); stroke: var(--line); stroke-width: 1.2; }
-.plan-tall .room-sauna .shell { fill: rgba(255, 90, 31, .16); stroke: rgba(255, 120, 70, .55); }
-.plan-tall .room-sauna.is-loyly .shell { fill: rgba(255, 90, 31, .32); }
-.plan-tall .outdoor .shell { stroke-dasharray: 6 5; }
-.plan-map.plan-tall .room text { font-size: 18px; fill: var(--cream); }
-.plan-map.plan-tall text.lbl-sm { font: 400 13px var(--sans); fill: var(--cream-soft); }
-
 @media (max-width: 860px) {
   .plan-head { flex-direction: column; align-items: stretch; gap: 16px; }
   .plan-body { grid-template-columns: 1fr; }
-  .plan-wide { display: none; }
-  .plan-tall { display: block; max-width: 460px; margin: 0 auto; }
+  /* the phone frame: the same plan, drawn twice as large, with the frame following the walk */
+  .plan-track { height: 560vh; }
+  .plan-pin { align-items: flex-start; padding-top: 16px; }
+  .plan-body { gap: 12px; }
+  .plan-cam { height: 48svh; overflow: hidden; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .plan-cam .plan-map { transform-origin: 0 0; }
+  .plan-hint .w { display: none; }
+  .plan-hint .n { display: inline; }
+  .plan-map .room text { font-size: 19px; }
+  .plan-now .clock { padding-bottom: 6px; }
+  .plan-now .clock b { font-size: 44px; }
+  .plan-note { font-size: 14px; min-height: 4.2em; margin: 8px 0 2px; }
+  .plan-now li button { padding: 8px 0; grid-template-columns: 26px auto 1fr; align-items: baseline; }
+  .plan-now li i { grid-row: auto; width: 20px; height: 20px; line-height: 20px; font-size: 11px; }
+  .plan-now li b { font-size: 15px; }
+  .plan-now li span { display: none; }
+  .plan-now li em { margin: 0; font-size: 13px; text-align: right; }
 }
