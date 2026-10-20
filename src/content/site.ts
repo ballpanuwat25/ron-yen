@@ -30,12 +30,15 @@ export const zones = [
 // A session is a time you book, not a routine: most people do 12 minutes in the sauna, 2 in the ice and
 // 10 on the deck, two to four times. Plunge only starts with each social session, while those guests are
 // still in the sauna, so the tubs are free; the two never share a tub.
+// Packs hold points, two to a social session and one to a plunge (390 × 2 is about 790), so one pack
+// pays for either without half sessions. Customers never see the word: "3 social or 6 plunges left".
+// `points: null` means the session is paid for on its own and cannot be booked with a pack.
 export type SessionKind = 'social' | 'plunge' | 'private';
 export const sessionKinds = {
-  social: { name: 'Social', minutes: 75, places: 10, uses: ['sauna', 'tubs', 'deck'] },
-  plunge: { name: 'Plunge only', minutes: 25, places: 2, uses: ['tubs', 'deck'] },
-  private: { name: 'Private', minutes: 75, places: 6, uses: ['sauna', 'tubs', 'deck'] },
-} as const satisfies Record<SessionKind, { name: string; minutes: number; places: number; uses: readonly string[] }>;
+  social: { name: 'Social', minutes: 75, places: 10, points: 2, uses: ['sauna', 'tubs', 'deck'] },
+  plunge: { name: 'Plunge only', minutes: 25, places: 2, points: 1, uses: ['tubs', 'deck'] },
+  private: { name: 'Private', minutes: 75, places: 6, points: null, uses: ['sauna', 'tubs', 'deck'] },
+} as const satisfies Record<SessionKind, { name: string; minutes: number; places: number; points: number | null; uses: readonly string[] }>;
 
 export const nav = [
   { label: 'A round', href: '#round' },
@@ -70,12 +73,14 @@ export const today = {
   ] satisfies Slot[],
 };
 
+// A pack either holds points or covers one session a day for 30 days; the rest are single tickets.
+export type Pack = { name: string; price: number; note?: string; points?: number; days?: number; perDay?: number; kind?: SessionKind };
 export const packs = [
-  { name: 'First visit', price: 490 },
-  { name: 'Single session', price: 790 },
-  { name: '5 sessions', note: '60 days', price: 3450 },
-  { name: '10 sessions', note: '120 days', price: 6290 },
-  { name: 'Monthly', note: 'one a day', price: 4900 },
-  { name: 'Private', note: '20:00, up to six', price: 3900 },
-  { name: 'Plunge only', note: '25 minutes', price: 390 },
-] as const;
+  { name: 'First visit', price: 490, note: 'first social only', kind: 'social' },
+  { name: 'Single session', price: 790, kind: 'social' },
+  { name: 'Plunge only', price: 390, note: '25 minutes', kind: 'plunge' },
+  { name: '5 sessions', price: 3450, note: '60 days', points: 10, days: 60 },
+  { name: '10 sessions', price: 6290, note: '120 days', points: 20, days: 120 },
+  { name: 'Monthly', price: 4900, note: 'one a day, social or plunge', days: 30, perDay: 1 },
+  { name: 'Private', price: 3900, note: '20:00, up to six', kind: 'private' },
+] as const satisfies readonly Pack[];
