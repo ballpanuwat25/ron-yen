@@ -36,9 +36,7 @@ img { display: block; max-width: 100%; }
 .hero-top, .hero-grid, .hero-foot { position: relative; z-index: 2; }
 
 .hero-top { display: flex; align-items: center; gap: 28px; padding: 18px var(--gutter); border-bottom: 1px solid var(--line); }
-.mark { display: flex; align-items: baseline; gap: 12px; margin-right: auto; }
-.mark b { font: 500 24px/1 var(--thai); }
-.mark small { font-size: 12px; color: var(--cream-soft); }
+.mark { margin-right: auto; font: 600 26px/1 var(--font-mark), var(--thai); }
 .hero-top nav { display: flex; gap: 26px; }
 .hero-top .book { background: var(--cream); color: #2a1008; padding: 9px 16px; font-weight: 500; }
 
@@ -78,7 +76,6 @@ img { display: block; max-width: 100%; }
 
 @media (max-width: 860px) {
   .hero-top nav { display: none; }
-  .mark small { display: none; }
   .hero { height: auto; min-height: 100svh; }
   .hero-grid { grid-template-columns: 1fr; }
   .hero-view { order: -1; border-bottom: 1px solid var(--line); padding: 28px var(--gutter) 18px; }

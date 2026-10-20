@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ron Yen — wordmark fonts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Athiti:wght@400;500;600&family=Bai+Jamjuree:wght@400;500&family=Fahkwang:wght@300;400;500&family=Mitr:wght@300;400&family=Instrument+Sans:wght@400;500&display=swap">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #170905; color: #f7ece2; font: 14px/1.5 'Instrument Sans', sans-serif; }
+  .row { position: relative; display: grid; grid-template-columns: 180px 1fr 1fr; align-items: center; gap: 24px; padding: 0 32px; height: 150px; border-bottom: 1px solid rgba(247,236,226,.34); overflow: hidden; }
+  /* the hero's ember print behind each sample */
+  .row::before { content: ''; position: absolute; inset: 0; background: url(img/hero-hot-wide.webp) center 30% / cover; filter: grayscale(1) contrast(1.18) brightness(.95); z-index: -2; }
+  .row::after { content: ''; position: absolute; inset: 0; background: #ff5a1f; mix-blend-mode: multiply; z-index: -1; }
+  .name { font-size: 12px; color: rgba(247,236,226,.72); }
+  .name b { display: block; color: #f7ece2; font-size: 14px; font-weight: 500; }
+  .head { display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(247,236,226,.34); padding: 16px 20px; }
+  .head span { font-size: 14px; }
+  .big { font-size: 72px; line-height: 1.1; }
+  .head b { font-size: 26px; line-height: 1; font-weight: inherit; }
+</style>
+</head>
+<body>
+  <!-- each row: the header as it would sit on the hero, and the mark at display size -->
+  <div class="row" style="font-family:'Athiti';font-weight:600"><div class="name" style="font-family:'Instrument Sans'"><b>Athiti 600</b>modern, no loops, light strokes</div>
+    <div class="head"><b>ร้อน·เย็น</b><span style="font-family:'Instrument Sans'">A round · The rooms · Packs</span></div><div class="big">ร้อน·เย็น</div></div>
+  <div class="row" style="font-family:'Athiti';font-weight:500"><div class="name" style="font-family:'Instrument Sans'"><b>Athiti 500</b></div>
+    <div class="head"><b>ร้อน·เย็น</b><span style="font-family:'Instrument Sans'">A round · The rooms · Packs</span></div><div class="big">ร้อน·เย็น</div></div>
+  <div class="row" style="font-family:'Bai Jamjuree';font-weight:500"><div class="name" style="font-family:'Instrument Sans'"><b>Bai Jamjuree 500</b>modern, squared</div>
+    <div class="head"><b>ร้อน·เย็น</b><span style="font-family:'Instrument Sans'">A round · The rooms · Packs</span></div><div class="big">ร้อน·เย็น</div></div>
+  <div class="row" style="font-family:'Fahkwang';font-weight:400"><div class="name" style="font-family:'Instrument Sans'"><b>Fahkwang 400</b>modern display, some contrast</div>
+    <div class="head"><b>ร้อน·เย็น</b><span style="font-family:'Instrument Sans'">A round · The rooms · Packs</span></div><div class="big">ร้อน·เย็น</div></div>
+  <div class="row" style="font-family:'Fahkwang';font-weight:300"><div class="name" style="font-family:'Instrument Sans'"><b>Fahkwang 300</b></div>
+    <div class="head"><b>ร้อน·เย็น</b><span style="font-family:'Instrument Sans'">A round · The rooms · Packs</span></div><div class="big">ร้อน·เย็น</div></div>
+  <div class="row" style="font-family:'Mitr';font-weight:400"><div class="name" style="font-family:'Instrument Sans'"><b>Mitr 400</b>modern, rounded</div>
+    <div class="head"><b>ร้อน·เย็น</b><span style="font-family:'Instrument Sans'">A round · The rooms · Packs</span></div><div class="big">ร้อน·เย็น</div></div>
+</body>
+</html>

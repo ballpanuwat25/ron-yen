@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from 'next';
-import { Instrument_Sans, Noto_Serif_Display, Noto_Serif_Thai } from 'next/font/google';
+import { Athiti, Instrument_Sans, Noto_Serif_Display, Noto_Serif_Thai } from 'next/font/google';
 import './globals.css';
 
-// numbers and headlines: a light display serif; text: a plain grotesk; the Thai wordmark: Noto Serif Thai
+// numbers and headlines: a light display serif; text: a plain grotesk; Thai text: Noto Serif Thai;
+// the Thai wordmark: Athiti, modern and without loops
 const serif = Noto_Serif_Display({ subsets: ['latin'], weight: ['200', '300'], variable: '--font-serif', display: 'swap' });
 const sans = Instrument_Sans({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-sans', display: 'swap' });
 const thai = Noto_Serif_Thai({ subsets: ['thai', 'latin'], weight: ['300', '500'], variable: '--font-thai', display: 'swap' });
+const mark = Athiti({ subsets: ['thai'], weight: '600', variable: '--font-mark', display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'Ron Yen · Sauna and ice bath, Ari, Bangkok',
@@ -19,7 +21,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${serif.variable} ${sans.variable} ${thai.variable}`}>
+    <html lang="en" className={`${serif.variable} ${sans.variable} ${thai.variable} ${mark.variable}`}>
       <body>{children}</body>
     </html>
   );

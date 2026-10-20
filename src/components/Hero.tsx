@@ -49,10 +49,8 @@ export default function Hero() {
       <canvas className="hero-steam" ref={steamRef} aria-hidden="true" />
 
       <header className="hero-top">
-        <a className="mark" href="#">
-          <b lang="th">{studio.wordmark}</b>
-          <small>{studio.wordmarkGloss}</small>
-        </a>
+        {/* the Thai mark alone, as Saeng House's header carries only แสง; the gloss waits for the footer */}
+        <a className="mark" href="#" lang="th" aria-label={studio.name}>{studio.wordmark}</a>
         <nav aria-label="Sections">
           {nav.map((n) => <a key={n.href} href={n.href}>{n.label}</a>)}
         </nav>
