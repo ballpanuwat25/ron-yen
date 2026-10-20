@@ -46,7 +46,9 @@ export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSe
 
   function build() {
     DPR = Math.min(2, devicePixelRatio || 1);
-    W = pane.clientWidth; H = pane.clientHeight;
+    // a pane not laid out yet (a hidden tab, the wall picture not placed) builds at a pixel; the
+    // ResizeObserver builds it again at its real size
+    W = Math.max(1, pane.clientWidth); H = Math.max(1, pane.clientHeight);
     fog.width = W * DPR; fog.height = H * DPR;
     steam.width = hero.clientWidth * DPR; steam.height = hero.clientHeight * DPR;
 
