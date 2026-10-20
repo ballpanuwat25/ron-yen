@@ -85,3 +85,77 @@ img { display: block; max-width: 100%; }
   .reading .num { font-size: 104px; }
   .hero-foot { flex-direction: column; align-items: flex-start; }
 }
+
+/* ---------------- the plan: three ways round the studio ---------------- */
+.plan { padding: clamp(64px, 9vw, 128px) var(--gutter) clamp(56px, 8vw, 112px); border-top: 1px solid var(--line); }
+.plan-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 40px; margin-bottom: 40px; }
+.plan h2 { margin: 0; font: 300 clamp(34px, 4.2vw, 60px)/1.04 var(--serif); letter-spacing: -.015em; }
+.plan-head p { margin: 0; max-width: 30em; color: var(--cream-soft); font-size: 15px; }
+.plan-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: clamp(24px, 4vw, 56px); align-items: start; }
+
+.plan-map { display: block; width: 100%; height: auto; overflow: visible; }
+.plan-map .room > rect:first-child { fill: rgba(247, 236, 226, .03); stroke: var(--line); stroke-width: 1.2; }
+.plan-map .room text { fill: var(--cream-soft); font: 400 13px var(--sans); letter-spacing: .02em; }
+.plan-map .room-sauna > rect:first-child { fill: rgba(255, 90, 31, .16); stroke: rgba(255, 120, 70, .55); }
+.plan-map .room-sauna.is-loyly > rect:first-child { fill: rgba(255, 90, 31, .32); }
+.plan-map .bench { fill: none; stroke: rgba(255, 150, 100, .45); stroke-width: 14; stroke-linejoin: round; opacity: .7; }
+.plan-map .stove { fill: rgba(23, 9, 5, .6); stroke: rgba(255, 150, 100, .6); }
+.plan-map .stone { fill: rgba(247, 236, 226, .35); }
+.plan-map .room-ice > rect:first-child { fill: rgba(191, 224, 242, .05); }
+.plan-map .tub { fill: rgba(191, 224, 242, .28); stroke: var(--ice); stroke-width: 1.5; }
+.plan-map .head { fill: none; stroke: var(--cream-soft); }
+.plan-map .slat { stroke: rgba(247, 236, 226, .14); stroke-width: 6; }
+.plan-map .rail { stroke: var(--cream-soft); stroke-width: 3; stroke-linecap: round; }
+.plan-map .doorway { stroke: var(--night); stroke-width: 5; }
+.plan-map .outdoor > rect:first-child { stroke-dasharray: 6 5; }
+.plan-map .roof { fill: rgba(247, 236, 226, .05); stroke: rgba(247, 236, 226, .45); stroke-dasharray: 2 4; }
+.plan-map .desk { fill: none; stroke: rgba(247, 236, 226, .55); stroke-width: 10; stroke-linejoin: round; opacity: .6; }
+.plan-map .tablet { fill: var(--night); stroke: var(--cream); }
+.plan-map .tablet-screen { fill: rgba(191, 224, 242, .5); }
+.plan-map .room text.note { font-size: 11px; }
+.plan-map .wc { fill: none; stroke: rgba(247, 236, 226, .35); }
+.plan-map .wc-bowl { fill: none; stroke: rgba(247, 236, 226, .45); }
+.plan-map .room text.wc-label { font-size: 11px; }
+.plan-map .tree path { fill: rgba(140, 170, 120, .14); stroke: rgba(190, 210, 170, .55); stroke-width: 1.2; }
+.plan-map .tree line { stroke: rgba(190, 210, 170, .35); }
+.plan-map .tree circle { fill: rgba(190, 210, 170, .6); }
+.plan-map .counter { fill: rgba(247, 236, 226, .08); stroke: rgba(247, 236, 226, .5); }
+.plan-map .cup { fill: none; stroke: rgba(247, 236, 226, .5); }
+.plan-map .stool { fill: none; stroke: rgba(247, 236, 226, .4); }
+.plan-map .door { fill: none; stroke: var(--cream); stroke-width: 1.5; }
+
+.plan-map .plank { stroke: rgba(247, 236, 226, .07); }
+.plan-map .seat { fill: none; stroke: rgba(247, 236, 226, .4); }
+.plan-map .table { fill: none; stroke: rgba(247, 236, 226, .4); }
+.plan-map .locker { fill: none; stroke: rgba(247, 236, 226, .25); }
+.plan-map .route { fill: none; stroke: var(--cream); stroke-width: 1.5; stroke-dasharray: 3 5; opacity: .7; }
+.plan-map .route-arrow { fill: none; stroke: var(--cream); stroke-width: 1.5; opacity: .7; }
+.plan-map .who circle { fill: var(--cream); stroke: var(--night); stroke-width: 3; }
+.plan-map .who .n { fill: var(--night); font: 500 14px var(--sans); }
+
+.plan-now .clock { display: flex; align-items: baseline; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.plan-now .clock b { font: 200 72px/1 var(--serif); font-variant-numeric: tabular-nums; }
+.plan-now .clock span { font-size: 13px; color: var(--cream-soft); }
+.plan-now ul { list-style: none; margin: 0; padding: 0; }
+.plan-now li { display: grid; grid-template-columns: 30px 1fr; gap: 2px 10px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.plan-now li i { grid-row: span 3; width: 24px; height: 24px; border-radius: 50%; background: var(--cream); color: var(--night);
+  font: 500 13px/24px var(--sans); font-style: normal; text-align: center; }
+.plan-now li b { font: 300 20px/1.2 var(--serif); }
+.plan-now li span { font-size: 12px; color: var(--cream-soft); }
+.plan-now li em { font: 300 15px/1.4 var(--thai); font-style: normal; margin-top: 4px; }
+
+/* phones get the portrait plan; it carries larger type in its own drawing */
+.plan-tall { display: none; }
+.plan-tall .shell { fill: rgba(247, 236, 226, .03); stroke: var(--line); stroke-width: 1.2; }
+.plan-tall .room-sauna .shell { fill: rgba(255, 90, 31, .16); stroke: rgba(255, 120, 70, .55); }
+.plan-tall .room-sauna.is-loyly .shell { fill: rgba(255, 90, 31, .32); }
+.plan-tall .outdoor .shell { stroke-dasharray: 6 5; }
+.plan-map.plan-tall .room text { font-size: 18px; fill: var(--cream); }
+.plan-map.plan-tall text.lbl-sm { font: 400 13px var(--sans); fill: var(--cream-soft); }
+
+@media (max-width: 860px) {
+  .plan-head { flex-direction: column; align-items: stretch; gap: 16px; }
+  .plan-body { grid-template-columns: 1fr; }
+  .plan-wide { display: none; }
+  .plan-tall { display: block; max-width: 460px; margin: 0 auto; }
+}

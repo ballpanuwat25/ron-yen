@@ -11,7 +11,7 @@ export const studio = {
   area: 'Soi Ari 7',
   address: ['Soi Phahonyothin 7, Ari', 'Phaya Thai, Bangkok 10400'],
   sauna: { temp: 88, seats: 10 },
-  iceBath: { temp: 3, tubs: 2 },
+  iceBath: { temp: 3, tubs: 4 },
   deck: { temp: 31, seats: 12 },
   showers: 2,
   opens: '06:30',
@@ -22,7 +22,7 @@ export const studio = {
 export const zones = [
   { id: 'sauna', name: 'Sauna', note: '88°, ten on the bench' },
   { id: 'showers', name: 'Showers', note: 'two, a rinse before the ice' },
-  { id: 'tubs', name: 'Ice baths', note: 'two tubs at 3°, one person each' },
+  { id: 'tubs', name: 'Ice baths', note: 'four round tubs at 3°, outside, one person each' },
   { id: 'deck', name: 'Deck', note: 'twelve seats outside, hot tea' },
   { id: 'lockers', name: 'Changing rooms', note: 'lockers and towels' },
 ] as const;
@@ -84,3 +84,44 @@ export const packs = [
   { name: 'Monthly', price: 4900, note: 'one a day, social or plunge', days: 30, perDay: 1 },
   { name: 'Private', price: 3900, note: '20:00, up to six', kind: 'private' },
 ] as const satisfies readonly Pack[];
+
+// "One round": three ways to spend the time, walked through a plan of the studio. None is a level;
+// they are reasons to come. The two social ones are both on the bench when someone ladles water on
+// the stones; the plunge-only guest is in and out in 25 minutes, while the sauna is still full.
+export type Place = 'sauna' | 'loyly' | 'rinse' | 'ice' | 'deck' | 'out';
+export const placeTemp: Record<Place, number> = { sauna: 88, loyly: 96, rinse: 28, ice: 3, deck: 31, out: 32 };
+export const placeName: Record<Place, string> = {
+  sauna: 'On the bench', loyly: 'Water on the stones', rinse: 'Under the shower', ice: 'In the ice', deck: 'On the deck', out: 'Gone to work',
+};
+export type Stay = readonly [Place, number];   // where, for how many minutes
+
+export const round = {
+  heading: 'Three ways to spend the time',
+  text: 'Nobody times you. Some come after work for two slow rounds and a pot of tea, some make a morning of it, some only want the ice before the office.',
+  minutes: 75,
+  ways: [
+    {
+      id: 'unwind', name: 'After work', note: 'Two rounds, then tea', kind: 'social',
+      stays: [['sauna', 10], ['rinse', 1], ['ice', 1], ['deck', 12], ['sauna', 2], ['loyly', 1.5], ['sauna', 8.5], ['rinse', 1], ['ice', 1.5], ['deck', 36.5]],
+    },
+    {
+      id: 'full', name: 'A whole morning', note: 'Four rounds', kind: 'social',
+      stays: [['sauna', 12], ['rinse', 1], ['ice', 2], ['deck', 5], ['sauna', 6], ['loyly', 1.5], ['sauna', 5.5], ['rinse', 1], ['ice', 2.5], ['deck', 5],
+        ['sauna', 12], ['rinse', 1], ['ice', 3], ['deck', 5], ['sauna', 8], ['rinse', 1], ['ice', 2], ['deck', 1.5]],
+    },
+    {
+      id: 'plunge', name: 'Before the office', note: 'Plunge only, 25 minutes', kind: 'plunge',
+      stays: [['rinse', 1], ['ice', 2], ['deck', 6], ['ice', 2], ['deck', 6], ['ice', 2], ['deck', 6], ['out', 50]],
+    },
+  ],
+  // what is happening, shown as the minutes pass
+  notes: [
+    { at: 0, text: 'Everyone starts at the same time. The plunge-only guest goes straight to the tubs while the bench fills.' },
+    { at: 10.5, text: 'The first plunge after the sauna. One minute is plenty the first time.' },
+    { at: 25, text: 'The plunge-only guest is dressed and gone, twenty-five minutes after arriving.' },
+    { at: 26, text: 'Someone ladles water on the stones, and the heat climbs for a minute.' },
+    { at: 38, text: 'After two rounds, out on the deck for good, with a pot of tea.' },
+    { at: 54.5, text: 'The third plunge is the long one: three minutes.' },
+    { at: 73, text: 'Seventy-five minutes, and everyone is out.' },
+  ],
+} as const;
