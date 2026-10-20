@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ron Yen — E, the sauna door</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@300;500&family=Noto+Serif+Display:wght@200;300&family=Instrument+Sans:wght@400;500&display=swap">
+<style>
+  :root {
+    --ember: #ff5a1f;
+    --cream: #f7ece2;
+    --cream-soft: rgba(247, 236, 226, .72);
+    --line: rgba(247, 236, 226, .3);
+    --ice: #bfe0f2;
+    --gutter: clamp(16px, 2.6vw, 40px);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { background: #170905; color: var(--cream); }
+  body { font: 400 14px/1.5 'Instrument Sans', system-ui, sans-serif; }
+
+  .hero { position: relative; height: 100svh; min-height: 640px; overflow: hidden; }
+
+  /* the sauna, printed in one hot ink */
+  .base, .vignette { position: absolute; inset: 0; }
+  .base img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) contrast(1.18) brightness(.95); }
+  .base::after { content: ''; position: absolute; inset: 0; background: var(--ember); mix-blend-mode: multiply; }
+  .vignette { pointer-events: none;
+    background: linear-gradient(90deg, rgba(23, 9, 5, .55) 0%, rgba(23, 9, 5, 0) 45%), linear-gradient(180deg, rgba(23, 9, 5, .5) 0%, rgba(23, 9, 5, 0) 16%); }
+
+  header { position: absolute; top: 0; left: 0; right: 0; z-index: 4; display: flex; align-items: center; gap: 28px; padding: 18px var(--gutter); }
+  .mark { display: flex; align-items: baseline; gap: 12px; margin-right: auto; }
+  .mark b { font: 500 24px/1 'Noto Serif Thai', serif; }
+  .mark b i { font-style: normal; display: inline-block; width: .5em; text-align: center; opacity: .6; }
+  .mark small { font-size: 12px; color: var(--cream-soft); }
+  header nav { display: flex; gap: 26px; }
+  header a { color: inherit; text-decoration: none; }
+  header .book { background: var(--cream); color: #2a1008; padding: 9px 16px; font-weight: 500; }
+
+  /* the page is ruled like a thermometer: one line for each place a round takes you */
+  .iso { position: absolute; left: 0; right: 0; z-index: 2; height: 0; border-top: 1px solid var(--line); }
+  .iso span { position: absolute; bottom: 6px; font-size: 12px; color: var(--cream-soft); letter-spacing: .03em; white-space: nowrap; }
+  .scale { position: absolute; left: var(--gutter); width: 9px; z-index: 2;
+    background: repeating-linear-gradient(180deg, var(--line) 0 1px, transparent 1px var(--tick, 6px)); }
+
+  .reading { position: absolute; z-index: 3; left: calc(var(--gutter) + 26px); transform: translateY(-100%); pointer-events: none; }
+  .reading .num { font: 200 clamp(110px, 12vw, 180px)/.78 'Noto Serif Display', serif; letter-spacing: -.04em;
+    font-variant-numeric: tabular-nums; display: flex; align-items: flex-start; transition: color .5s; }
+  .reading .num sup { font-size: .3em; line-height: 1; margin: .14em 0 0 .04em; font-weight: 300; }
+  .reading .where { position: absolute; left: 4px; top: calc(100% + 10px); font: 300 18px/1.35 'Noto Serif Thai', serif; white-space: nowrap; }
+  .reading.cold .num { color: var(--ice); }
+  .marker { position: absolute; z-index: 3; left: calc(var(--gutter) - 4px); width: 17px; height: 22px; transform: translateY(-100%); transition: color .5s; }
+
+  /* the door: one tall pane of glass and a wooden pull, standing across the lines */
+  .door { position: absolute; z-index: 3; left: 47%; width: min(20vw, 300px); top: 13%; bottom: 7%; }
+  .pane { position: absolute; inset: 0; overflow: hidden; border-radius: 3px; cursor: crosshair; touch-action: none; background: #0e1820;
+    box-shadow: 0 0 0 1px rgba(255, 220, 200, .28), 0 30px 60px rgba(20, 5, 0, .45); }
+  .pane .coldprint, .pane canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  /* outside, the ice baths printed in the cold ink, the same way the sauna is printed in the hot one */
+  .coldprint img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) contrast(1.15) brightness(1.35); }
+  .coldprint::after { content: ''; position: absolute; inset: 0; background: #7fb8e0; mix-blend-mode: multiply; }
+  .pull { position: absolute; left: -26px; top: 34%; width: 12px; height: 30%; border-radius: 6px;
+    background: linear-gradient(90deg, #6b3a1c, #a8683b 45%, #5a2f15); box-shadow: 0 8px 18px rgba(20, 5, 0, .5); }
+  .pull::before, .pull::after { content: ''; position: absolute; left: 10px; width: 16px; height: 6px; background: #8a8580; border-radius: 1px; }
+  .pull::before { top: 12%; } .pull::after { bottom: 12%; }
+  .door .say { position: absolute; left: 0; right: 0; top: calc(100% + 10px); text-align: center; font-size: 12px; color: var(--cream-soft); transition: opacity .4s; }
+
+  .side { position: absolute; z-index: 3; right: var(--gutter); top: 13%; bottom: 7%; width: min(22vw, 320px); display: flex; flex-direction: column; justify-content: space-between; }
+  .side h1 { font: 300 clamp(36px, 3.6vw, 56px)/1 'Noto Serif Display', serif; letter-spacing: -.02em; }
+  .side h1 em { font-style: normal; color: var(--ice); }
+  .side p { margin-top: 14px; color: var(--cream-soft); max-width: 24em; }
+  .kicker { font-size: 12px; color: var(--cream-soft); letter-spacing: .03em; }
+  .today { list-style: none; padding: 0; margin-top: 10px; }
+  .today li { display: grid; grid-template-columns: 50px 1fr; gap: 2px 12px; padding: 9px 0; border-top: 1px solid var(--line); }
+  .today time { grid-row: span 2; font: 300 18px/1.2 'Noto Serif Display', serif; font-variant-numeric: tabular-nums; }
+  .today .seats { display: flex; gap: 2px; align-items: center; height: 14px; }
+  .today .seats svg { width: 8px; height: 11px; }
+  .today .left { font-size: 12px; color: var(--cream-soft); }
+  .label { position: fixed; z-index: 9; right: 12px; bottom: 12px; font-size: 12px; background: rgba(0, 0, 0, .55); padding: 4px 10px; color: #ddd; }
+
+  @media (max-width: 860px) {
+    header nav { display: none; }
+    .mark small { display: none; }
+    /* a phone: the door on the right, the scale and its reading in the strip beside it, the rest below */
+    .hero { height: auto; min-height: 0; padding-bottom: 28px; }
+    .door { left: auto; right: var(--gutter); top: 84px; bottom: auto; width: 56vw; height: 62svh; }
+    .pull { left: -20px; width: 10px; }
+    .side { position: relative; right: auto; top: auto; bottom: auto; width: auto; margin: calc(84px + 62svh + 64px) var(--gutter) 0; gap: 28px; }
+    .iso span { display: none; }
+    .reading .num { font-size: 60px; }
+    .reading .where { font-size: 13px; white-space: normal; width: 21vw; }
+  }
+</style>
+</head>
+<body>
+<div class="label">E · the sauna door</div>
+<section class="hero" id="hero">
+  <div class="base"><img id="baseImg" alt=""></div>
+  <div class="vignette"></div>
+
+  <header>
+    <div class="mark"><b>ร้อน<i>·</i>เย็น</b><small>Ron Yen · hot, cold</small></div>
+    <nav><a href="#">A round</a><a href="#">The rooms</a><a href="#">Packs</a><a href="#">Find us</a></nav>
+    <a class="book" href="#">Book a session</a>
+  </header>
+
+  <div class="iso" data-t="88"><span>88° the bench</span></div>
+  <div class="iso" data-t="31"><span>31° the deck</span></div>
+  <div class="iso" data-t="3"><span>3° the tubs</span></div>
+  <div class="scale" id="scale"></div>
+  <svg class="marker" id="marker" viewBox="0 0 18 24" aria-hidden="true"><path d="M9 1 C9 1 2 10 2 15.2 A7 7 0 0 0 16 15.2 C16 10 9 1 9 1 Z" fill="currentColor"/></svg>
+
+  <div class="reading" id="reading">
+    <div class="num"><span id="deg">88</span><sup>°C</sup></div>
+    <div class="where" id="where">On the bench, ten at a time</div>
+  </div>
+
+  <div class="door" id="door">
+    <div class="pull" aria-hidden="true"></div>
+    <div class="pane" id="pane">
+      <div class="coldprint"><img id="coldImg" alt="The ice baths, outside the sauna door"></div>
+      <canvas id="fog"></canvas>
+    </div>
+    <span class="say" id="say">Wipe the glass</span>
+  </div>
+
+  <aside class="side">
+    <div>
+      <h1>Sweat at 88°.<br><em>Then the ice.</em></h1>
+      <p>Seventy-five minutes, as many rounds as you like. Two minutes from BTS Ari, open from 06:30.</p>
+    </div>
+    <div>
+      <span class="kicker">Today, Tue 20 Oct</span>
+      <ul class="today" id="today"></ul>
+    </div>
+  </aside>
+</section>
+
+<script type="module">
+import { loadImage, photo, smooth } from './gl.js';
+
+const DROP = 'M9 1 C9 1 2 10 2 15.2 A7 7 0 0 0 16 15.2 C16 10 9 1 9 1 Z';
+const narrow = matchMedia('(max-width: 860px)').matches;
+const hero = document.getElementById('hero'), pane = document.getElementById('pane');
+
+// ---------- today's next sessions ----------
+document.getElementById('today').innerHTML = [['17:00', 10], ['18:30', 9], ['20:00', null]].map(([time, taken]) => {
+  const seats = taken === null ? '' : Array.from({ length: 10 }, (_, i) =>
+    `<svg viewBox="0 0 18 24" aria-hidden="true"><path d="${DROP}" fill="${i < taken ? 'rgba(247,236,226,.85)' : 'none'}" stroke="rgba(247,236,226,.6)" stroke-width="1.6"/></svg>`).join('');
+  const left = taken === null ? 'Private, up to six' : taken === 10 ? 'Full, join the waitlist' : `${10 - taken} of 10 left`;
+  return `<li><time>${time}</time><span class="seats">${seats}</span><span class="left">${left}</span></li>`;
+}).join('');
+
+// ---------- the thermometer: lines at 88°, 31° and 3°, and the reading riding the scale ----------
+let Y88, Y3;
+const yOf = t => Y3 + (Y88 - Y3) * (t - 3) / 85;
+function placeScale() {
+  // on a phone the scale runs down beside the door; on a wide screen it fills the hero
+  if (narrow) {
+    const d = document.getElementById('door');
+    Y88 = d.offsetTop + d.offsetHeight * .14; Y3 = d.offsetTop + d.offsetHeight * .9;
+  } else {
+    const h = hero.clientHeight;
+    Y88 = h * .26; Y3 = h * .84;
+  }
+  // each line is labelled just short of the door's pull (phones hide the labels; the reading says it)
+  const doorLeft = document.getElementById('door').getBoundingClientRect().left - hero.getBoundingClientRect().left;
+  document.querySelectorAll('.iso').forEach(el => {
+    el.style.top = yOf(+el.dataset.t) + 'px';
+    const label = el.querySelector('span');
+    if (!narrow) label.style.left = (doorLeft - 48 - label.offsetWidth) + 'px';
+  });
+  const sc = document.getElementById('scale');
+  sc.style.top = Y88 + 'px'; sc.style.height = (Y3 - Y88) + 'px';
+  sc.style.setProperty('--tick', ((Y3 - Y88) / 17) + 'px');   // a tick every 5°
+}
+
+// ---------- photos ----------
+const hotSrc = photo('hero-hot');
+document.getElementById('baseImg').src = hotSrc;
+document.getElementById('coldImg').src = '../img/hero-cold-tall.webp';
+const hotImg = await loadImage(hotSrc);
+
+// ---------- the fogged pane ----------
+const cv = document.getElementById('fog'), cx = cv.getContext('2d');
+const degEl = document.getElementById('deg'), whereEl = document.getElementById('where'), sayEl = document.getElementById('say');
+const readingEl = document.getElementById('reading'), markerEl = document.getElementById('marker');
+const coarse = matchMedia('(pointer: coarse)').matches;
+if (coarse) sayEl.textContent = 'Wipe the glass with a finger';
+
+const HOLD = 4000, REFOG = 5000, CELL = 3;
+let W, H, DPR, fogTex, MW, MH, clear, wipedAt, maskCv, mctx, maskImg;
+const trails = [];
+
+function build() {
+  placeScale();
+  DPR = Math.min(2, devicePixelRatio || 1);
+  W = pane.clientWidth; H = pane.clientHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+  // the fog is the same sauna seen through wet glass: the slice of the photo behind the pane, blurred
+  fogTex = document.createElement('canvas'); fogTex.width = cv.width; fogTex.height = cv.height;
+  const f = fogTex.getContext('2d');
+  const hr = hero.getBoundingClientRect(), pr = pane.getBoundingClientRect();
+  const s = Math.max(hr.width / hotImg.width, hr.height / hotImg.height);
+  const ox = (hr.width - hotImg.width * s) / 2 - (pr.left - hr.left), oy = (hr.height - hotImg.height * s) / 2 - (pr.top - hr.top);
+  f.fillStyle = '#b8461c'; f.fillRect(0, 0, fogTex.width, fogTex.height);
+  f.filter = `grayscale(1) contrast(1.35) brightness(.85) blur(${10 * DPR}px)`;
+  f.drawImage(hotImg, ox * DPR, oy * DPR, hotImg.width * s * DPR, hotImg.height * s * DPR);
+  f.filter = 'none';
+  f.globalCompositeOperation = 'multiply'; f.fillStyle = '#ff6a2a'; f.fillRect(0, 0, fogTex.width, fogTex.height);
+  f.globalCompositeOperation = 'source-over'; f.fillStyle = 'rgba(255, 196, 160, .22)'; f.fillRect(0, 0, fogTex.width, fogTex.height);
+  const sheen = f.createLinearGradient(0, 0, fogTex.width, fogTex.height * .4);
+  sheen.addColorStop(0, 'rgba(255,236,220,.22)'); sheen.addColorStop(.35, 'rgba(255,236,220,0)');
+  f.fillStyle = sheen; f.fillRect(0, 0, fogTex.width, fogTex.height);
+  const beads = Math.round(W * H / 140);
+  for (let i = 0; i < beads; i++) {
+    const x = Math.random() * fogTex.width, y = Math.random() * fogTex.height;
+    const r = (Math.random() ** 3 * 3 + .5) * DPR;
+    const g = f.createRadialGradient(x - r * .3, y - r * .3, 0, x, y, r);
+    g.addColorStop(0, 'rgba(255,244,232,.6)'); g.addColorStop(.7, 'rgba(255,230,210,.14)'); g.addColorStop(1, 'rgba(70,20,8,.28)');
+    f.fillStyle = g; f.beginPath(); f.arc(x, y, r, 0, 7); f.fill();
+  }
+  MW = Math.ceil(W / CELL); MH = Math.ceil(H / CELL);
+  clear = new Float32Array(MW * MH); wipedAt = new Float32Array(MW * MH).fill(-1e9);
+  maskCv = document.createElement('canvas'); maskCv.width = MW; maskCv.height = MH;
+  mctx = maskCv.getContext('2d'); maskImg = mctx.createImageData(MW, MH);
+  trails.length = 0;
+}
+
+let last = null, lastInput = -1e9;
+function stamp(px, py, now) {
+  const r = (coarse ? 34 : 42) / CELL;
+  const cx0 = px / CELL, cy0 = py / CELL;
+  const x0 = Math.max(0, Math.floor(cx0 - r)), x1 = Math.min(MW - 1, Math.ceil(cx0 + r));
+  const y0 = Math.max(0, Math.floor(cy0 - r)), y1 = Math.min(MH - 1, Math.ceil(cy0 + r));
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const d = Math.hypot(x - cx0, y - cy0) / r;
+    if (d >= 1) continue;
+    const k = 1 - smooth(.55, 1, d), i = y * MW + x;
+    if (k > clear[i]) clear[i] = k;
+    wipedAt[i] = now;
+  }
+}
+function wipeTo(x, y) {
+  const now = performance.now();
+  const from = last || { x, y };
+  const steps = Math.max(1, Math.ceil(Math.hypot(x - from.x, y - from.y) / 4));
+  for (let i = 1; i <= steps; i++) {
+    const px = from.x + (x - from.x) * i / steps, py = from.y + (y - from.y) * i / steps;
+    stamp(px, py, now);
+    if (Math.random() < .008) trails.push({ pts: [[px + (Math.random() - .5) * 40, py + 30]], v: .5 + Math.random() * .8, w: 1.1 + Math.random() * 1.4, born: now, fade: 1 });
+  }
+  last = { x, y }; lastInput = now;
+}
+const local = e => { const r = pane.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+pane.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || e.buttons) wipeTo(...local(e)); });
+pane.addEventListener('pointerdown', e => { last = null; pane.setPointerCapture(e.pointerId); wipeTo(...local(e)); });
+pane.addEventListener('pointerleave', () => { last = null; });
+pane.addEventListener('pointerup', () => { last = null; });
+
+function demoWipe() {
+  const pts = [];
+  for (let i = 0; i <= 36; i++) { const k = i / 36; pts.push([W * (.12 + k * .76), H * .42 + Math.sin(k * Math.PI * 2) * H * .05]); }
+  let i = 0; last = null;
+  const id = setInterval(() => { if (i >= pts.length) { clearInterval(id); last = null; return; } wipeTo(...pts[i++]); }, 24);
+}
+
+// the reading: how much ice you can see through the door takes it from the bench toward the tubs
+let shown = 88;
+let prev = performance.now();
+function frame(now) {
+  const dt = Math.min(50, now - prev); prev = now;
+  let sum = 0;
+  const px = maskImg.data;
+  for (let i = 0; i < clear.length; i++) {
+    let c = clear[i];
+    if (c > 0 && now - wipedAt[i] > HOLD) c = Math.max(0, c - dt / REFOG);
+    clear[i] = c; sum += c; px[i * 4 + 3] = c * 255;
+  }
+  mctx.putImageData(maskImg, 0, 0);
+  cx.globalCompositeOperation = 'source-over';
+  cx.clearRect(0, 0, cv.width, cv.height);
+  cx.drawImage(fogTex, 0, 0);
+  cx.globalCompositeOperation = 'destination-out';
+  cx.imageSmoothingQuality = 'high';
+  cx.drawImage(maskCv, 0, 0, MW * CELL * DPR, MH * CELL * DPR);
+  cx.lineCap = 'round';
+  for (let i = trails.length - 1; i >= 0; i--) {
+    const tr = trails[i];
+    if (tr.v > .06) { const [lx, ly] = tr.pts[tr.pts.length - 1]; tr.pts.push([lx + (Math.random() - .5) * .5, ly + tr.v * dt * .06]); tr.v *= .99; }
+    if (now - tr.born > HOLD) tr.fade -= dt / REFOG;
+    if (tr.fade <= 0) { trails.splice(i, 1); continue; }
+    cx.strokeStyle = `rgba(0,0,0,${.55 * tr.fade})`; cx.lineWidth = tr.w * DPR;
+    cx.beginPath(); cx.moveTo(tr.pts[0][0] * DPR, tr.pts[0][1] * DPR);
+    for (const p of tr.pts) cx.lineTo(p[0] * DPR, p[1] * DPR);
+    cx.stroke();
+  }
+
+  const k = smooth(.03, .4, sum / clear.length);
+  const target = 88 - 85 * k;
+  shown += (target - shown) * (1 - Math.exp(-dt / 260));
+  const y = yOf(shown);
+  readingEl.style.top = y + 'px'; markerEl.style.top = y + 'px';
+  degEl.textContent = Math.round(shown);
+  const cold = shown < 45;
+  readingEl.classList.toggle('cold', cold);
+  markerEl.style.color = cold ? 'var(--ice)' : 'var(--cream)';
+  whereEl.textContent = shown > 60 ? 'On the bench, ten at a time' : shown > 20 ? 'Out of the heat' : 'In the tubs, one at a time';
+  sayEl.style.opacity = k > .05 ? 0 : 1;
+  requestAnimationFrame(frame);
+}
+
+addEventListener('resize', build);
+build();
+requestAnimationFrame(frame);
+setTimeout(() => { if (performance.now() - lastInput > 1500) demoWipe(); }, 1200);
+</script>
+</body>
+</html>

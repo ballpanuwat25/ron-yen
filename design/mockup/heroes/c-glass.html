@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ron Yen — C, the glass door</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@300;500&family=Noto+Serif+Display:wght@200;300&family=Instrument+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="common.css">
+<style>.hero { cursor: crosshair; touch-action: pan-y; }</style>
+</head>
+<body>
+<div class="label">C · the glass door</div>
+<section class="hero" id="hero">
+  <img class="photo" id="cold" alt="The ice baths, seen through the sauna door">
+  <canvas id="fog"></canvas>
+  <div class="shade"></div>
+  <header><div class="mark"><b>ร้อน<i>·</i>เย็น</b><small>Ron Yen · hot, cold</small></div><span class="book">Book a session</span></header>
+  <div class="reading">
+    <div class="deg"><span id="deg">88</span><sup>°C</sup></div>
+    <div class="where" id="where">Inside, the glass fogs up</div>
+  </div>
+  <div class="hint" id="hint">Wipe the glass</div>
+</section>
+<script type="module">
+import { loadImage, photo, smooth } from './gl.js';
+
+// Sitting in the sauna, the glass door is fogged with steam. Wipe it and the ice baths are
+// right there outside. A wipe stays clear for a few seconds, then fogs over again.
+const hero = document.getElementById('hero');
+const cv = document.getElementById('fog'), cx = cv.getContext('2d');
+const degEl = document.getElementById('deg'), whereEl = document.getElementById('where'), hintEl = document.getElementById('hint');
+const coarse = matchMedia('(pointer: coarse)').matches;
+if (coarse) hintEl.textContent = 'Wipe the glass with a finger';
+
+const HOLD = 4000;          // ms a freshly wiped patch stays clear before fog starts to come back
+const REFOG = 5000;         // ms, roughly, for a patch to fog over completely once it starts
+const CELL = 4;             // CSS px per cell of the wipe mask
+
+const [hotImg] = await Promise.all([loadImage(photo('hero-hot'))]);
+document.getElementById('cold').src = photo('hero-cold');
+
+let W, H, DPR, fogTex;
+// the wipe mask lives in floats, so fog can return slowly without 8-bit rounding stalling it
+let MW, MH, clear, wipedAt, maskCv, mctx, maskImg;
+const trails = [];          // drips: each a path that stays clear, then fogs back like the rest
+
+function cover(ctx, img, w, h) {
+  const s = Math.max(w / img.width, h / img.height);
+  ctx.drawImage(img, (w - img.width * s) / 2, (h - img.height * s) / 2, img.width * s, img.height * s);
+}
+function build() {
+  DPR = Math.min(2, devicePixelRatio || 1);
+  W = hero.clientWidth; H = hero.clientHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+  // the fog: the sauna itself, blurred out by steam on the glass, with beads of condensation
+  fogTex = document.createElement('canvas'); fogTex.width = cv.width; fogTex.height = cv.height;
+  const f = fogTex.getContext('2d');
+  // an opaque ground first, or the blur thins out at the edges and lets the ice show through
+  f.fillStyle = 'rgb(176, 146, 118)'; f.fillRect(0, 0, fogTex.width, fogTex.height);
+  f.filter = `blur(${44 * DPR}px)`;
+  cover(f, hotImg, fogTex.width, fogTex.height);
+  f.filter = 'none';
+  f.fillStyle = 'rgba(232, 210, 188, .58)'; f.fillRect(0, 0, fogTex.width, fogTex.height);
+  const beads = Math.round(W * H / 260);
+  for (let i = 0; i < beads; i++) {
+    const x = Math.random() * fogTex.width, y = Math.random() * fogTex.height;
+    const r = (Math.random() ** 3 * 3.2 + .5) * DPR;
+    const g = f.createRadialGradient(x - r * .3, y - r * .3, 0, x, y, r);
+    g.addColorStop(0, 'rgba(255,248,238,.55)'); g.addColorStop(.7, 'rgba(255,240,225,.12)'); g.addColorStop(1, 'rgba(60,40,30,.25)');
+    f.fillStyle = g; f.beginPath(); f.arc(x, y, r, 0, 7); f.fill();
+  }
+
+  MW = Math.ceil(W / CELL); MH = Math.ceil(H / CELL);
+  clear = new Float32Array(MW * MH); wipedAt = new Float32Array(MW * MH).fill(-1e9);
+  maskCv = document.createElement('canvas'); maskCv.width = MW; maskCv.height = MH;
+  mctx = maskCv.getContext('2d'); maskImg = mctx.createImageData(MW, MH);
+  trails.length = 0;
+}
+
+// ---------- wiping ----------
+let last = null, lastInput = -1e9;
+function stamp(px, py, now) {
+  const r = (coarse ? 44 : 60) / CELL;
+  const cx0 = px / CELL, cy0 = py / CELL;
+  const x0 = Math.max(0, Math.floor(cx0 - r)), x1 = Math.min(MW - 1, Math.ceil(cx0 + r));
+  const y0 = Math.max(0, Math.floor(cy0 - r)), y1 = Math.min(MH - 1, Math.ceil(cy0 + r));
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const dx = x - cx0, dy = y - cy0, d = Math.hypot(dx, dy) / r;
+    if (d >= 1) continue;
+    const k = 1 - smooth(.55, 1, d);
+    const i = y * MW + x;
+    if (k > clear[i]) clear[i] = k;
+    wipedAt[i] = now;
+  }
+}
+function wipeTo(x, y) {
+  const now = performance.now();
+  const from = last || { x, y };
+  const dist = Math.hypot(x - from.x, y - from.y);
+  const steps = Math.max(1, Math.ceil(dist / 5));
+  for (let i = 1; i <= steps; i++) {
+    const px = from.x + (x - from.x) * i / steps, py = from.y + (y - from.y) * i / steps;
+    stamp(px, py, now);
+    // water gathers along the bottom of a wipe and now and then runs
+    if (Math.random() < .006) {
+      const r = coarse ? 44 : 60;
+      trails.push({ pts: [[px + (Math.random() - .5) * r, py + r * .75]], v: .5 + Math.random() * .8,
+        w: 1.2 + Math.random() * 1.6, born: now, fade: 1 });
+    }
+  }
+  last = { x, y };
+  lastInput = now;
+  hintEl.style.opacity = 0;
+}
+hero.addEventListener('pointermove', e => {
+  if (e.pointerType !== 'mouse' && !e.buttons) return;
+  const r = hero.getBoundingClientRect();
+  wipeTo(e.clientX - r.left, e.clientY - r.top);
+});
+hero.addEventListener('pointerdown', e => { last = null; const r = hero.getBoundingClientRect(); wipeTo(e.clientX - r.left, e.clientY - r.top); });
+hero.addEventListener('pointerleave', () => { last = null; });
+hero.addEventListener('pointerup', () => { last = null; });
+
+// a first wipe on its own, so a visitor sees what the glass does
+function demoWipe() {
+  const pts = [];
+  for (let i = 0; i <= 44; i++) { const k = i / 44; pts.push([W * (.42 + k * .44), H * .42 + Math.sin(k * Math.PI * 2.2) * H * .07]); }
+  let i = 0; last = null;
+  const id = setInterval(() => {
+    if (i >= pts.length) { clearInterval(id); last = null; return; }
+    wipeTo(...pts[i++]);
+  }, 22);
+}
+
+// ---------- frame ----------
+let prev = performance.now(), cleared = 0;
+function frame(now) {
+  const dt = Math.min(50, now - prev); prev = now;
+  let sum = 0;
+  const px = maskImg.data;
+  for (let i = 0; i < clear.length; i++) {
+    let c = clear[i];
+    if (c > 0 && now - wipedAt[i] > HOLD) c = Math.max(0, c - dt / REFOG);
+    clear[i] = c; sum += c;
+    px[i * 4 + 3] = c * 255;
+  }
+  cleared = sum / clear.length;
+  mctx.putImageData(maskImg, 0, 0);
+
+  cx.globalCompositeOperation = 'source-over';
+  cx.clearRect(0, 0, cv.width, cv.height);
+  cx.drawImage(fogTex, 0, 0);
+  cx.globalCompositeOperation = 'destination-out';
+  cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high';
+  cx.drawImage(maskCv, 0, 0, MW * CELL * DPR, MH * CELL * DPR);
+
+  // drips: run while they have water, then leave a clear thread that fogs back like the rest
+  cx.lineCap = 'round'; cx.lineJoin = 'round';
+  for (let i = trails.length - 1; i >= 0; i--) {
+    const tr = trails[i];
+    if (tr.v > .06) {
+      const [lx, ly] = tr.pts[tr.pts.length - 1];
+      tr.pts.push([lx + (Math.random() - .5) * .5, ly + tr.v * dt * .06]);
+      tr.v *= .992;
+    }
+    if (now - tr.born > HOLD) tr.fade -= dt / REFOG;
+    if (tr.fade <= 0) { trails.splice(i, 1); continue; }
+    cx.strokeStyle = `rgba(0,0,0,${.55 * tr.fade})`; cx.lineWidth = tr.w * DPR;
+    cx.beginPath(); cx.moveTo(tr.pts[0][0] * DPR, tr.pts[0][1] * DPR);
+    for (const p of tr.pts) cx.lineTo(p[0] * DPR, p[1] * DPR);
+    cx.stroke();
+  }
+
+  const k = smooth(.02, .3, cleared);
+  degEl.textContent = Math.round(88 - 85 * k);
+  whereEl.textContent = k > .5 ? 'Outside the door, the ice baths' : 'Inside, the glass fogs up';
+  requestAnimationFrame(frame);
+}
+
+addEventListener('resize', build);
+build();
+requestAnimationFrame(frame);
+setTimeout(() => { if (performance.now() - lastInput > 1500) demoWipe(); }, 1400);
+</script>
+</body>
+</html>

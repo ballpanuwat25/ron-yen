@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ron Yen — B, thaw</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@300;500&family=Noto+Serif+Display:wght@200;300&family=Instrument+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="common.css">
+<style>.hero { cursor: ew-resize; touch-action: pan-y; }</style>
+</head>
+<body>
+<div class="label">B · thaw</div>
+<section class="hero" id="hero">
+  <canvas id="gl"></canvas>
+  <div class="shade"></div>
+  <header><div class="mark"><b>ร้อน<i>·</i>เย็น</b><small>Ron Yen · hot, cold</small></div><span class="book">Book a session</span></header>
+  <div class="reading">
+    <div class="deg"><span id="deg">88</span><sup>°C</sup></div>
+    <div class="where" id="where">The sauna, ten on the bench</div>
+  </div>
+  <div class="hint" id="hint">Move across the picture</div>
+</section>
+<script type="module">
+import { makeGL, loadImage, photo, smooth } from './gl.js';
+
+// The two photos meet along a melting edge, not a crossfade: heat spreads in blotches from the
+// left, the hot side shimmers like air over a stove, the cold side holds perfectly still.
+const FRAG = `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D uHot, uCold;
+uniform vec4 uHotFit, uColdFit;
+uniform vec2 uRes, uMouse;
+uniform float uTime, uT;
+
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+  vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
+  return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y);
+}
+float fbm(vec2 p) { float s = 0., a = .5; for (int i = 0; i < 5; i++) { s += a * noise(p); p *= 2.03; a *= .5; } return s; }
+
+void main() {
+  vec2 uv = vUv;
+  float aspect = uRes.x / uRes.y;
+  // the melt pattern: blotchy, biased so heat arrives from the left edge
+  float n = fbm(uv * vec2(3. * aspect, 3.) + 4.) * .55 + (1. - uv.x) * .45;
+  float edge = uT * 1.25 - .12;
+  float hotMask = smoothstep(n - .025, n + .025, edge);
+  float rim = 1. - smoothstep(0., .035, abs(edge - n));
+
+  // heat haze: rising, finer near the bottom where the stones are
+  vec2 haze = vec2(fbm(uv * vec2(9., 6.) + vec2(0., -uTime * .55)) - .5, fbm(uv * vec2(7., 5.) + vec2(3., -uTime * .4)) - .5);
+  float near = exp(-length((uv - uMouse) * vec2(aspect, 1.)) * 4.);
+  vec2 hotUv = uv + haze * (.009 + .012 * near);
+  vec3 hot = texture2D(uHot, hotUv * uHotFit.xy + uHotFit.zw).rgb;
+
+  // along the thaw line the picture bends like water running off ice
+  vec2 bend = vec2(dFdx(n), dFdy(n)) * rim * 18.;
+  vec3 cold = texture2D(uCold, (uv + bend * .02) * uColdFit.xy + uColdFit.zw).rgb;
+
+  vec3 col = mix(cold, hot, hotMask);
+  col += rim * .10 * vec3(.9, .95, 1.);        // the wet edge catches the light
+  gl_FragColor = vec4(col, 1.);
+}`;
+
+const canvas = document.getElementById('gl');
+const hero = document.getElementById('hero');
+const degEl = document.getElementById('deg'), whereEl = document.getElementById('where'), hintEl = document.getElementById('hint');
+if (matchMedia('(pointer: coarse)').matches) hintEl.textContent = 'Slide a finger sideways';
+
+const R = makeGL(canvas, '#extension GL_OES_standard_derivatives : enable\n' + FRAG);
+const [hotImg, coldImg] = await Promise.all([loadImage(photo('hero-hot')), loadImage(photo('hero-cold'))]);
+R.texture('uHot', hotImg); R.texture('uCold', coldImg);
+function fit() { R.resize(); R.cover('uHotFit', hotImg.width, hotImg.height); R.cover('uColdFit', coldImg.width, coldImg.height); }
+addEventListener('resize', fit); fit();
+
+let t = 1, target = 1, lastInput = -1e9, mx = .5, my = .5;
+function setFrom(e) {
+  const r = hero.getBoundingClientRect();
+  mx = (e.clientX - r.left) / r.width; my = (e.clientY - r.top) / r.height;
+  target = 1 - Math.min(1, Math.max(0, mx));
+  lastInput = performance.now(); hintEl.style.opacity = 0;
+}
+hero.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || e.buttons) setFrom(e); });
+hero.addEventListener('pointerdown', setFrom);
+
+let prev = performance.now();
+function frame(now) {
+  const dt = Math.min(40, now - prev); prev = now;
+  if (now - lastInput > 4000) {
+    const ph = (now - lastInput - 4000) / 10000;
+    target = smooth(-.6, .6, Math.cos(ph * Math.PI * 2));
+  }
+  t += (target - t) * (1 - Math.exp(-dt / 220));
+  R.set1('uT', t); R.set1('uTime', now / 1000); R.set2('uMouse', mx, my);
+  R.draw();
+  degEl.textContent = Math.round(3 + 85 * t);
+  whereEl.textContent = t > .5 ? 'The sauna, ten on the bench' : 'The ice bath, one at a time';
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

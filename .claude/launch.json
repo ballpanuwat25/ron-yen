@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ron-yen",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "-p", "3012"],
+      "port": 3012
+    },
+    {
+      "name": "ron-yen-mockup",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "3011", "--directory", "design/mockup"],
+      "port": 3011
+    }
+  ]
+}

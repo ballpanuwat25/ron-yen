@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ron Yen — mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@300;500&family=Noto+Serif+Display:wght@200;300&family=Instrument+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --t: 1;              /* 1 = 88° sauna, 0 = 3° ice bath; set from JS */
+    --ink: #f4e9dc;
+    --ink-soft: rgba(244, 233, 220, .72);
+    --paper: #15110e;
+    --rule: rgba(244, 233, 220, .18);
+    --amber: #e9a46a;
+    --ice: #a9d0e6;
+    --gutter: clamp(16px, 4vw, 56px);
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html { background: var(--paper); color: #f1e8de; }
+  body { font: 400 15px/1.55 'Instrument Sans', system-ui, sans-serif; background: var(--paper); }
+  h2 { font: 300 clamp(30px, 4.2vw, 52px)/1.08 'Noto Serif Display', serif; letter-spacing: -.01em; }
+
+  /* ---------------- hero ---------------- */
+  .hero {
+    position: relative; height: 100svh; min-height: 560px; overflow: hidden; color: var(--ink);
+    touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: ew-resize;
+  }
+  .photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .photo.cold { opacity: var(--cold-photo, 0); }
+  .shade {
+    position: absolute; inset: 0; pointer-events: none;
+    background:
+      linear-gradient(90deg, rgba(10, 8, 7, .62) 0%, rgba(10, 8, 7, .18) 55%, rgba(10, 8, 7, 0) 80%),
+      linear-gradient(0deg, rgba(10, 8, 7, .6) 0%, rgba(10, 8, 7, 0) 32%);
+  }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  header {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 3;
+    display: flex; align-items: baseline; justify-content: space-between; padding: 26px var(--gutter);
+  }
+  .mark { display: flex; align-items: baseline; gap: 12px; }
+  .mark b { font: 500 26px/1 'Noto Serif Thai', serif; letter-spacing: .01em; }
+  .mark b i { font-style: normal; display: inline-block; width: .5em; text-align: center; opacity: .6; }
+  .mark small { font-size: 12px; color: var(--ink-soft); letter-spacing: .04em; }
+  nav { display: flex; gap: 28px; font-size: 14px; }
+  nav a { color: inherit; text-decoration: none; }
+  nav a.book { border-bottom: 1px solid currentColor; padding-bottom: 2px; }
+
+  .reading {
+    position: absolute; z-index: 3; left: var(--gutter); bottom: clamp(140px, 22vh, 210px);
+    max-width: 640px; pointer-events: none;
+  }
+  .deg {
+    font: 200 clamp(150px, 24vw, 340px)/.78 'Noto Serif Display', serif;
+    letter-spacing: -.04em; font-variant-numeric: tabular-nums; display: flex; align-items: flex-start;
+  }
+  .deg sup { font-size: .32em; line-height: 1; margin: .12em 0 0 .04em; font-weight: 300; }
+  .where { position: relative; height: 1.6em; margin-top: 22px; font: 300 22px/1.6 'Noto Serif Thai', serif; }
+  .where span { position: absolute; left: 0; white-space: nowrap; transition: opacity .35s; }
+  .where .cold, .is-cold .where .hot { opacity: 0; }
+  .is-cold .where .cold { opacity: 1; }
+  .lede { margin-top: 10px; max-width: 30em; color: var(--ink-soft); }
+
+  .scale {
+    position: absolute; z-index: 3; left: var(--gutter); right: var(--gutter); bottom: 40px;
+    height: 54px; pointer-events: none;
+  }
+  .scale .rule { position: absolute; left: 0; right: 0; bottom: 18px; height: 12px; }
+  .scale .rule::before {
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(90deg, var(--ink-soft) 0 1px, transparent 1px calc(100% / 85));
+    mask: linear-gradient(0deg, #000 0 40%, transparent 40%);
+  }
+  .scale .ends { position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between;
+    font-size: 12px; color: var(--ink-soft); letter-spacing: .04em; }
+  .drop { position: absolute; bottom: 30px; width: 18px; height: 24px; transform: translateX(-50%); }
+  .hint { position: absolute; z-index: 3; right: var(--gutter); bottom: 110px; font-size: 12px;
+    color: var(--ink-soft); transition: opacity .6s; }
+
+  /* ---------------- one round ---------------- */
+  .round { position: relative; height: 260vh; }
+  .round .pin { position: sticky; top: 0; height: 100svh; display: grid; align-content: center; padding: 0 var(--gutter); }
+  .round .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 28px; }
+  .round .now { text-align: right; }
+  .round .now b { display: block; font: 200 clamp(64px, 9vw, 120px)/.9 'Noto Serif Display', serif; font-variant-numeric: tabular-nums; }
+  .round .now span { font: 300 17px/1.4 'Noto Serif Thai', serif; color: rgba(241, 232, 222, .7); }
+  .round p.note { max-width: 32em; color: rgba(241, 232, 222, .7); margin-top: 14px; }
+  .chart { width: 100%; height: auto; overflow: visible; }
+  .chart .axis text { fill: rgba(241, 232, 222, .55); font: 11px 'Instrument Sans', sans-serif; }
+  .chart .axis line { stroke: rgba(241, 232, 222, .14); }
+  .chart .lane text { fill: rgba(241, 232, 222, .62); font: 300 13px 'Noto Serif Thai', serif; }
+
+  /* ---------------- the two rooms ---------------- */
+  .rooms { display: grid; grid-template-columns: 1fr 1fr; }
+  .room { padding: clamp(28px, 5vw, 72px) var(--gutter) clamp(40px, 6vw, 88px); }
+  .room.sauna { background: #2a1b12; }
+  .room.bath { background: #0f1a24; }
+  .room img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; margin-bottom: 28px; }
+  .room .temp { font: 200 64px/1 'Noto Serif Display', serif; margin-bottom: 10px; }
+  .room.sauna .temp { color: var(--amber); }
+  .room.bath .temp { color: var(--ice); }
+  .room h3 { font: 300 24px/1.3 'Noto Serif Thai', serif; margin-bottom: 10px; }
+  .room p { color: rgba(241, 232, 222, .72); max-width: 30em; }
+
+  /* ---------------- today ---------------- */
+  .today { padding: clamp(64px, 9vw, 128px) var(--gutter); display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 3fr); gap: clamp(32px, 6vw, 96px); }
+  .today .day { display: flex; gap: 18px; margin: 22px 0 8px; font-size: 14px; color: rgba(241, 232, 222, .6); }
+  .today .day b { color: #f1e8de; font-weight: 500; border-bottom: 1px solid currentColor; }
+  .slots { list-style: none; padding: 0; border-top: 1px solid var(--rule); }
+  .slots li { display: grid; grid-template-columns: 64px 1fr auto auto auto; align-items: center; gap: 18px;
+    padding: 14px 0; border-bottom: 1px solid var(--rule); }
+  .slots time { font: 300 22px/1 'Noto Serif Display', serif; font-variant-numeric: tabular-nums; }
+  .slots .kind { font-size: 14px; color: rgba(241, 232, 222, .7); }
+  .slots .seats { display: flex; gap: 3px; }
+  .slots .seats svg { width: 9px; height: 12px; }
+  .slots .left { font-size: 13px; color: rgba(241, 232, 222, .6); min-width: 6.5em; text-align: right; }
+  .slots .act { font-size: 14px; border-bottom: 1px solid currentColor; color: #f1e8de; text-decoration: none; text-align: center; white-space: nowrap; }
+  .slots li.full time, .slots li.full .kind { opacity: .45; }
+  .slots li.full .act { color: var(--ice); }
+
+  .packs h3 { font: 300 24px/1.3 'Noto Serif Thai', serif; margin-bottom: 18px; }
+  .packs dl { display: grid; grid-template-columns: 1fr auto; row-gap: 14px; }
+  .packs dt { display: flex; align-items: baseline; gap: 8px; }
+  .packs dt::after { content: ''; flex: 1; border-bottom: 1px dotted rgba(241, 232, 222, .3); transform: translateY(-4px); }
+  .packs dt small { color: rgba(241, 232, 222, .55); font-size: 12px; }
+  .packs dd { font: 300 20px/1 'Noto Serif Display', serif; padding-left: 8px; font-variant-numeric: tabular-nums; }
+  .packs p { margin-top: 22px; font-size: 13px; color: rgba(241, 232, 222, .6); }
+
+  footer { padding: 28px var(--gutter) 40px; border-top: 1px solid var(--rule); font-size: 12px; color: rgba(241, 232, 222, .5);
+    display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+  @media (max-width: 700px) {
+    nav a:not(.book) { display: none; }
+    .mark small { display: none; }
+    .reading { bottom: 150px; }
+    .where { font-size: 19px; }
+    .lede { font-size: 14px; }
+    .hint { left: var(--gutter); right: auto; bottom: 108px; }
+    .round .head { flex-direction: column; align-items: flex-start; }
+    .round .now { text-align: left; }
+    .rooms { grid-template-columns: 1fr; }
+    .today { grid-template-columns: 1fr; }
+    .slots li { grid-template-columns: 54px 1fr auto; row-gap: 8px; }
+    .slots .seats { grid-column: 2; grid-row: 2; }
+    .slots .left { grid-column: 3; grid-row: 1; }
+    .slots .act { grid-column: 3; grid-row: 2; justify-self: end; }
+  }
+</style>
+</head>
+<body>
+<section class="hero" id="hero">
+  <picture>
+    <source media="(max-width: 700px)" srcset="img/hero-hot-tall.webp">
+    <img class="photo hot" src="img/hero-hot-wide.webp" alt="Steam rising off the sauna stones">
+  </picture>
+  <picture>
+    <source media="(max-width: 700px)" srcset="img/hero-cold-tall.webp">
+    <img class="photo cold" src="img/hero-cold-wide.webp" alt="A barrel of crushed ice for the plunge">
+  </picture>
+  <div class="shade"></div>
+  <canvas id="vapour"></canvas>
+
+  <header>
+    <div class="mark"><b>ร้อน<i>·</i>เย็น</b><small>Ron Yen · hot, cold</small></div>
+    <nav><a href="#round">A round</a><a href="#rooms">The rooms</a><a href="#today">Packs</a><a class="book" href="#today">Book a session</a></nav>
+  </header>
+
+  <div class="reading">
+    <div class="deg"><span id="deg">88</span><sup>°C</sup></div>
+    <div class="where"><span class="hot">The sauna, ten on the bench</span><span class="cold">The ice bath, one at a time</span></div>
+    <p class="lede">Seventy-five minutes between the two, as many rounds as you like. Soi Ari 7, two minutes from the BTS.</p>
+  </div>
+
+  <div class="hint" id="hint">Move across the picture to change the water</div>
+
+  <div class="scale">
+    <svg class="drop" id="drop" viewBox="0 0 18 24" aria-hidden="true">
+      <path d="M9 1 C9 1 2 10 2 15.2 A7 7 0 0 0 16 15.2 C16 10 9 1 9 1 Z" fill="currentColor"/>
+    </svg>
+    <div class="rule"></div>
+    <div class="ends"><span>88° sauna</span><span>3° ice bath</span></div>
+  </div>
+</section>
+
+<section class="round" id="round">
+  <div class="pin">
+    <div class="head">
+      <div>
+        <h2>One session, three rounds</h2>
+        <p class="note">Twelve minutes on the bench, two in the ice, ten outside on the deck with a cup of tea. Then again. Nobody times you; this is just how most people do it.</p>
+      </div>
+      <div class="now"><b id="roundDeg">30°</b><span id="roundWhere">On the deck</span></div>
+    </div>
+    <svg class="chart" id="chart" viewBox="0 0 1000 300" aria-label="Temperature over a 75 minute session"></svg>
+  </div>
+</section>
+
+<section class="rooms" id="rooms">
+  <article class="room sauna">
+    <img src="img/room-sauna-room.webp" alt="The sauna bench and stove" loading="lazy">
+    <div class="temp">88°</div>
+    <h3>The sauna</h3>
+    <p>One room, benches for ten. Every round someone ladles water on the stones and the heat climbs for a minute. Towels are on the rail by the door.</p>
+  </article>
+  <article class="room bath">
+    <img src="img/room-bath-room.webp" alt="A steel plunge tub of cold water" loading="lazy">
+    <div class="temp">3°</div>
+    <h3>The ice baths</h3>
+    <p>Two tubs, one person each. We tip in fresh ice at six every morning and again at noon. Two minutes is plenty; one is fine.</p>
+  </article>
+</section>
+
+<section class="today" id="today">
+  <div>
+    <h2>Sessions this week</h2>
+    <div class="day"><b>Tue 20</b><span>Wed 21</span><span>Thu 22</span><span>Fri 23</span><span>Sat 24</span></div>
+    <ul class="slots" id="slots"></ul>
+  </div>
+  <div class="packs">
+    <h3>Packs</h3>
+    <dl>
+      <dt>First visit</dt><dd>490</dd>
+      <dt>Single session</dt><dd>790</dd>
+      <dt>5 sessions <small>60 days</small></dt><dd>3,450</dd>
+      <dt>10 sessions <small>120 days</small></dt><dd>6,290</dd>
+      <dt>Monthly <small>one a day</small></dt><dd>4,900</dd>
+      <dt>Private <small>20:00, up to six</small></dt><dd>3,900</dd>
+    </dl>
+    <p>Baht. A pack's sessions sit in your account and come off as you book. Cancel six hours ahead and the session comes back.</p>
+  </div>
+</section>
+
+<footer>
+  <span>Ron Yen, Soi Phahonyothin 7, Ari, Bangkok</span>
+  <span>A fictional studio, built as a portfolio piece. Photos from Unsplash.</span>
+</footer>
+
+<script>
+const hero = document.getElementById('hero');
+const root = document.documentElement;
+const degEl = document.getElementById('deg');
+const dropEl = document.getElementById('drop');
+const hintEl = document.getElementById('hint');
+const cv = document.getElementById('vapour');
+const cx = cv.getContext('2d');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const DROP_PATH = 'M9 1 C9 1 2 10 2 15.2 A7 7 0 0 0 16 15.2 C16 10 9 1 9 1 Z';
+
+const HOT_INK = [244, 233, 220], COLD_INK = [226, 238, 246];
+let W = 0, H = 0, DPR = 1;
+let t = 1, target = 1;          // 1 hot, 0 cold
+let lastInput = -1e9;
+const pointer = { x: -1e4, y: -1e4 };
+
+// ---------- input: the x position across the hero sets the temperature ----------
+function setFromX(clientX) {
+  const r = hero.getBoundingClientRect();
+  const u = Math.min(1, Math.max(0, (clientX - r.left) / r.width));
+  target = 1 - u;               // left edge = 88°, right edge = 3°, as the wordmark reads
+  lastInput = performance.now();
+  hintEl.style.opacity = 0;
+}
+hero.addEventListener('pointermove', e => {
+  const r = hero.getBoundingClientRect();
+  pointer.x = e.clientX - r.left; pointer.y = e.clientY - r.top;
+  if (e.pointerType === 'mouse' || e.buttons) setFromX(e.clientX);
+});
+hero.addEventListener('pointerdown', e => setFromX(e.clientX));
+hero.addEventListener('pointerleave', () => { pointer.x = pointer.y = -1e4; });
+
+function resize() {
+  DPR = Math.min(2, devicePixelRatio || 1);
+  W = hero.clientWidth; H = hero.clientHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+}
+
+// ---------- vapour: warm steam rises off the stones; cold mist spills over the barrel and sinks ----------
+function sprite(rgb) {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const r = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  r.addColorStop(0, `rgba(${rgb},.55)`);
+  r.addColorStop(.45, `rgba(${rgb},.22)`);
+  r.addColorStop(1, `rgba(${rgb},0)`);
+  g.fillStyle = r; g.fillRect(0, 0, 128, 128);
+  return c;
+}
+const STEAM = sprite('255,242,228'), MIST = sprite('214,232,245');
+const puffs = [];
+function spawn(kind) {
+  if (kind === 'steam') {
+    puffs.push({ kind, x: W * (.15 + Math.random() * .8), y: H + 40,
+      vx: (Math.random() - .5) * .2, vy: -(.35 + Math.random() * .55),
+      r: 60 + Math.random() * 90, grow: .25 + Math.random() * .35,
+      life: 0, max: 520 + Math.random() * 380, seed: Math.random() * 1000 });
+  } else {
+    // from the ice surface (upper middle of the photo), spilling outward and down
+    const fromX = W * (.3 + Math.random() * .5);
+    puffs.push({ kind, x: fromX, y: H * (.28 + Math.random() * .12),
+      vx: (fromX - W * .55) / W * 1.2 + (Math.random() - .5) * .25, vy: .08 + Math.random() * .18,
+      r: 50 + Math.random() * 70, grow: .3 + Math.random() * .3,
+      life: 0, max: 700 + Math.random() * 500, seed: Math.random() * 1000 });
+  }
+}
+function stepVapour(now, dt) {
+  const heat = smooth(.35, 1, t), chill = smooth(.65, 0, t);
+  let steam = 0, mist = 0;
+  for (const p of puffs) p.kind === 'steam' ? steam++ : mist++;
+  if (!reduced) {
+    if (steam < 110 * heat && Math.random() < .9) spawn('steam');
+    if (mist < 70 * chill && Math.random() < .6) spawn('mist');
+  }
+  cx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  cx.clearRect(0, 0, W, H);
+  cx.globalCompositeOperation = 'screen';
+  for (let i = puffs.length - 1; i >= 0; i--) {
+    const p = puffs[i];
+    const mistP = p.kind === 'mist';
+    p.life += dt;
+    p.vx += Math.sin(now / 1400 + p.seed) * (mistP ? .002 : .004);
+    const dx = p.x - pointer.x, dy = p.y - pointer.y, d = Math.sqrt(dx * dx + dy * dy) + 1;
+    if (d < 220) { const f = (1 - d / 220) * .09; p.vx += dx / d * f; p.vy += dy / d * f * .5; }
+    if (mistP) {
+      // cold air is heavy: it sinks, then pools and spreads along the floor
+      p.vy = p.vy * .995 + .0015;
+      if (p.y > H * .82) { p.vy *= .9; p.vx *= 1.01; }
+      p.vx *= .995;
+    } else {
+      p.vx *= .985; p.vy = p.vy * .995 - .002;
+    }
+    p.x += p.vx * dt * .06; p.y += p.vy * dt * .06;
+    p.r += p.grow * dt * .06;
+    const k = p.life / p.max;
+    const a = Math.sin(Math.min(1, k) * Math.PI) * (mistP ? chill : heat);
+    if (k >= 1 || p.y < -p.r || p.y > H + p.r) { puffs.splice(i, 1); continue; }
+    cx.globalAlpha = a * (mistP ? .4 : .7);
+    const h = mistP ? p.r * 1.1 : p.r * 2;    // mist lies flatter than steam
+    cx.drawImage(mistP ? MIST : STEAM, p.x - p.r, p.y - h / 2, p.r * 2, h);
+  }
+  cx.globalAlpha = 1;
+}
+
+// ---------- the hero follows the temperature ----------
+function paint() {
+  root.style.setProperty('--t', t.toFixed(4));
+  // the photos cross over a narrow band, so the muddy double exposure never lingers
+  root.style.setProperty('--cold-photo', (1 - smooth(.38, .62, t)).toFixed(4));
+  hero.classList.toggle('is-cold', t < .5);
+  degEl.textContent = Math.round(3 + 85 * t);
+  const ink = HOT_INK.map((h, i) => Math.round(COLD_INK[i] + (h - COLD_INK[i]) * t));
+  root.style.setProperty('--ink', `rgb(${ink})`);
+  root.style.setProperty('--ink-soft', `rgba(${ink},.72)`);
+  dropEl.style.left = (1 - t) * dropEl.parentElement.clientWidth + 'px';
+  dropEl.style.color = tempColour(3 + 85 * t);
+}
+
+// ---------- one round: the session as a temperature line, drawn as you scroll ----------
+// minutes → temperature: three rounds of sauna 12, ice 2, deck 10 (the last rest is longer)
+const SEGMENTS = [];
+{
+  let m = 0;
+  for (let r = 0; r < 3; r++) {
+    SEGMENTS.push({ from: m, to: m + 12, temp: 88, where: 'In the sauna' }); m += 12;
+    SEGMENTS.push({ from: m, to: m + 2, temp: 3, where: 'In the ice' }); m += 2;
+    const rest = r < 2 ? 10 : 15;
+    SEGMENTS.push({ from: m, to: m + rest, temp: 31, where: r < 2 ? 'On the deck' : 'Tea, then home' }); m += rest;
+  }
+}
+// a phone gets a squarer chart, so the labels stay readable instead of shrinking with the width
+let CH;
+function chartBox() {
+  return innerWidth < 700 ? { w: 400, h: 330, x0: 30, x1: 392, y0: 290, y1: 20 } : { w: 1000, h: 300, x0: 40, x1: 990, y0: 250, y1: 20 };
+}
+const xOf = m => CH.x0 + (CH.x1 - CH.x0) * m / 75;
+const yOf = c => CH.y0 + (CH.y1 - CH.y0) * c / 90;
+function tempAt(m) {
+  // a short ramp between rooms, so the line reads as a body warming and cooling, not a square wave
+  for (let i = 0; i < SEGMENTS.length; i++) {
+    const s = SEGMENTS[i];
+    if (m <= s.to) {
+      const prev = SEGMENTS[i - 1];
+      if (prev && m < s.from + .8) return prev.temp + (s.temp - prev.temp) * smooth(s.from - .1, s.from + .8, m);
+      return s.temp;
+    }
+  }
+  return 31;
+}
+function whereAt(m) { return (SEGMENTS.find(s => m <= s.to) || SEGMENTS[SEGMENTS.length - 1]).where; }
+function tempColour(c) {
+  const k = Math.min(1, Math.max(0, (c - 3) / 85));
+  const a = [169, 208, 230], b = [233, 164, 106];
+  return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * k))})`;
+}
+
+const chart = document.getElementById('chart');
+const roundDeg = document.getElementById('roundDeg'), roundWhere = document.getElementById('roundWhere');
+let linePath, lineLen, roundDrop;
+function buildChart() {
+  CH = chartBox();
+  chart.setAttribute('viewBox', `0 0 ${CH.w} ${CH.h}`);
+  const pts = [];
+  for (let m = 0; m <= 75; m += .25) pts.push(`${xOf(m).toFixed(1)},${yOf(tempAt(m)).toFixed(1)}`);
+  chart.innerHTML = `
+    <defs><linearGradient id="heat" gradientUnits="userSpaceOnUse" x1="0" y1="${yOf(3)}" x2="0" y2="${yOf(88)}">
+      <stop offset="0" stop-color="${tempColour(3)}"/><stop offset=".35" stop-color="rgb(220,214,206)"/><stop offset="1" stop-color="${tempColour(88)}"/>
+    </linearGradient></defs>
+    <g class="axis">
+      ${[0, 15, 30, 45, 60, 75].map(m => `<line x1="${xOf(m)}" x2="${xOf(m)}" y1="${CH.y1}" y2="${CH.y0}"/><text x="${xOf(m)}" y="${CH.y0 + 26}" text-anchor="middle">${m}${m === 75 ? ' min' : ''}</text>`).join('')}
+      ${[88, 31, 3].map(c => `<text x="0" y="${yOf(c) + 4}">${c}°</text>`).join('')}
+    </g>
+    <g class="lane"><text x="${xOf(1)}" y="${yOf(88) - 8}">sauna</text><text x="${xOf(14.2)}" y="${yOf(3) + 20}">ice</text><text x="${xOf(16)}" y="${yOf(31) - 8}">deck</text></g>
+    <path id="line" d="M${pts.join(' L')}" fill="none" stroke="url(#heat)" stroke-width="2.5" stroke-linejoin="round"/>
+    <path id="roundDrop" d="${DROP_PATH}" transform="translate(-9,-30)"/>`;
+  linePath = chart.querySelector('#line');
+  roundDrop = chart.querySelector('#roundDrop');
+  lineLen = linePath.getTotalLength();
+  linePath.style.strokeDasharray = lineLen;
+}
+function scrollRound() {
+  const sec = document.getElementById('round');
+  const r = sec.getBoundingClientRect();
+  const k = Math.min(1, Math.max(0, -r.top / (r.height - innerHeight)));
+  const m = k * 75;
+  // draw the line up to the drop: find the path length at this minute by its x position
+  let lo = 0, hi = lineLen;
+  const x = xOf(m);
+  for (let i = 0; i < 22; i++) { const mid = (lo + hi) / 2; linePath.getPointAtLength(mid).x < x ? lo = mid : hi = mid; }
+  linePath.style.strokeDashoffset = lineLen - lo;
+  const c = tempAt(m);
+  roundDrop.setAttribute('transform', `translate(${x - 9},${yOf(c) - 30})`);
+  roundDrop.setAttribute('fill', tempColour(c));
+  roundDeg.textContent = Math.round(c) + '°';
+  roundDeg.style.color = tempColour(c);
+  roundWhere.textContent = whereAt(m);
+}
+
+// ---------- this week's sessions (demo data) ----------
+const SLOTS = [
+  ['06:30', 'Social', 7], ['08:00', 'Social', 10], ['09:30', 'Social', 4], ['11:00', 'Social', 2],
+  ['12:30', 'Social', 5], ['14:00', 'Social', 3], ['15:30', 'Social', 6], ['17:00', 'Social', 10],
+  ['18:30', 'Social', 9], ['20:00', 'Private', null],
+];
+document.getElementById('slots').innerHTML = SLOTS.map(([time, kind, taken]) => {
+  const priv = taken === null, full = taken === 10;
+  const seats = priv ? '' : Array.from({ length: 10 }, (_, i) =>
+    `<svg viewBox="0 0 18 24" aria-hidden="true"><path d="${DROP_PATH}" fill="${i < taken ? 'rgba(241,232,222,.75)' : 'none'}" stroke="rgba(241,232,222,.5)" stroke-width="1.5"/></svg>`).join('');
+  const left = priv ? 'whole studio' : full ? 'full, 2 waiting' : `${10 - taken} of 10 left`;
+  const act = full ? 'Join waitlist' : 'Book';
+  return `<li class="${full ? 'full' : ''}"><time>${time}</time><span class="kind">${kind} · 75 min</span>
+    <span class="seats" aria-label="${left}">${seats}</span><span class="left">${left}</span><a class="act" href="#">${act}</a></li>`;
+}).join('');
+
+let prev = performance.now();
+function frame(now) {
+  const dt = Math.min(50, now - prev); prev = now;
+  // left alone for a while, the water breathes between the two on its own, resting at each end
+  if (now - lastInput > 4000) {
+    const phase = (now - lastInput - 4000) / 9000;
+    target = smooth(-.6, .6, Math.cos(phase * Math.PI * 2));
+  }
+  t += (target - t) * (1 - Math.exp(-dt / (reduced ? 1 : 140)));
+  if (hero.getBoundingClientRect().bottom > 0) { paint(); stepVapour(now, dt); }
+  requestAnimationFrame(frame);
+}
+
+function smooth(a, b, x) { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k); }
+
+if (matchMedia('(pointer: coarse)').matches) hintEl.textContent = 'Slide a finger sideways to change the water';
+addEventListener('resize', () => { resize(); buildChart(); scrollRound(); });
+addEventListener('scroll', scrollRound, { passive: true });
+resize();
+buildChart();
+scrollRound();
+lastInput = performance.now() - 2000;
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

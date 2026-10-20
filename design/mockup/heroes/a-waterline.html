@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ron Yen — A, water line</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@300;500&family=Noto+Serif+Display:wght@200;300&family=Instrument+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="common.css">
+<style>
+  /* on touch screens the water rises as you scroll, so the hero holds still for a while */
+  .track { height: 100svh; }
+  .touch .track { height: 220svh; }
+  .touch .hero { position: sticky; top: 0; }
+  .hero { cursor: ns-resize; touch-action: pan-y; }
+</style>
+</head>
+<body>
+<div class="label">A · water line</div>
+<div class="track">
+<section class="hero" id="hero">
+  <canvas id="gl"></canvas>
+  <div class="shade"></div>
+  <header><div class="mark"><b>ร้อน<i>·</i>เย็น</b><small>Ron Yen · hot, cold</small></div><span class="book">Book a session</span></header>
+  <div class="reading">
+    <div class="deg"><span id="deg">88</span><sup>°C</sup></div>
+    <div class="where" id="where">The sauna, ten on the bench</div>
+  </div>
+  <div class="hint" id="hint">Raise the water with the pointer</div>
+</section>
+</div>
+<script type="module">
+import { makeGL, loadImage, photo, smooth } from './gl.js';
+
+const FRAG = `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D uHot, uCold, uWave;
+uniform vec4 uHotFit, uColdFit;
+uniform vec2 uRes;
+uniform float uTime, uLevel;
+
+vec3 hot(vec2 uv) { return texture2D(uHot, uv * uHotFit.xy + uHotFit.zw).rgb; }
+vec3 cold(vec2 uv) { return texture2D(uCold, uv * uColdFit.xy + uColdFit.zw).rgb; }
+
+void main() {
+  vec2 uv = vUv;
+  float wave = texture2D(uWave, vec2(uv.x, .5)).r - .5;
+  float surf = uLevel + wave * .14;
+  float d = uv.y - surf;                       // > 0 under water
+  float px = 1. / uRes.y;
+  vec3 col;
+  if (d < 0.) {
+    col = hot(uv);
+    // a thin band of the cold scene reflected just above the surface
+    col = mix(col, cold(vec2(uv.x, .26 - d * 1.8)) * .9, .18 * smoothstep(-.035, 0., d));
+  } else {
+    // seen through water: a slow wobble that is strongest near the surface, and a cool deepening
+    float near = exp(-d * 9.);
+    vec2 r = vec2(sin(uv.y * 38. - uTime * 1.2 + uv.x * 5.), cos(uv.x * 31. + uTime * .9 + uv.y * 7.)) * (.0025 + .007 * near);
+    r.x += wave * .05 * near;
+    // the cold photo hangs from the surface, so the ice always sits just under the water line
+    col = cold(vec2(uv.x, d + .26) + r);
+    col *= vec3(.86, .95, 1.06);
+    col *= 1. - smoothstep(0., .9, d) * .28;
+    // caustic glints, faint
+    float c = sin((uv.x + r.y * 4.) * 90. + uTime) * sin((uv.y + r.x * 4.) * 70. - uTime * .7);
+    col += smoothstep(.85, 1., c) * .06 * near;
+  }
+  // the meniscus: a bright line with a darker lip under it
+  col += exp(-abs(d) / (px * 1.4)) * .55;
+  col -= exp(-max(d, 0.) / (px * 10.)) * step(0., d) * .1;
+  gl_FragColor = vec4(col, 1.);
+}`;
+
+const canvas = document.getElementById('gl');
+const hero = document.getElementById('hero');
+const degEl = document.getElementById('deg'), whereEl = document.getElementById('where'), hintEl = document.getElementById('hint');
+const touch = matchMedia('(pointer: coarse)').matches;
+if (touch) { document.documentElement.classList.add('touch'); hintEl.textContent = 'Scroll to step in'; }
+
+const R = makeGL(canvas, FRAG);
+const [hotImg, coldImg] = await Promise.all([loadImage(photo('hero-hot')), loadImage(photo('hero-cold'))]);
+R.texture('uHot', hotImg); R.texture('uCold', coldImg);
+
+// the water surface: a 1D string of springs, nudged by the pointer as it crosses
+const N = 160;
+const h = new Float32Array(N), v = new Float32Array(N);
+const waveCv = document.createElement('canvas'); waveCv.width = N; waveCv.height = 1;
+const wctx = waveCv.getContext('2d');
+const waveData = wctx.createImageData(N, 1);
+
+function fit() { R.resize(); R.cover('uHotFit', hotImg.width, hotImg.height); R.cover('uColdFit', coldImg.width, coldImg.height); }
+addEventListener('resize', fit); fit();
+
+let level = .82, target = .82;                // surface position from the top: low water = hot
+let lastY = null, lastInput = -1e9;
+hero.addEventListener('pointermove', e => {
+  if (touch) return;
+  const r = hero.getBoundingClientRect();
+  const y = (e.clientY - r.top) / r.height, x = (e.clientX - r.left) / r.width;
+  target = Math.min(.96, Math.max(.06, y));
+  lastInput = performance.now(); hintEl.style.opacity = 0;
+  if (lastY !== null) splash(x, (y - lastY) * 2.2);
+  lastY = y;
+});
+hero.addEventListener('pointerdown', e => {
+  const r = hero.getBoundingClientRect();
+  splash((e.clientX - r.left) / r.width, .5);
+});
+function splash(x, amount) {
+  const i = Math.round(x * (N - 1));
+  for (let k = -4; k <= 4; k++) { const j = i + k; if (j > 0 && j < N - 1) v[j] += amount * Math.exp(-k * k / 6); }
+}
+if (touch) addEventListener('scroll', () => {
+  const k = Math.min(1, Math.max(0, scrollY / (hero.parentElement.offsetHeight - innerHeight)));
+  const was = target;
+  target = .9 - k * .84;
+  if (Math.abs(target - was) > .002) splash(.3 + Math.random() * .4, (target - was) * 6);
+  hintEl.style.opacity = k > .05 ? 0 : 1;
+}, { passive: true });
+
+let prev = performance.now();
+function frame(now) {
+  const dt = Math.min(40, now - prev) / 16.7; prev = now;
+  if (!touch && now - lastInput > 4500) {
+    // left alone, the water rises and falls slowly, resting at each end
+    const ph = (now - lastInput - 4500) / 11000;
+    target = .5 + .42 * (2 * smooth(-.6, .6, Math.cos(ph * Math.PI * 2)) - 1);
+  }
+  const before = level;
+  level += (target - level) * (1 - Math.exp(-dt / 9));
+  // the moving surface itself makes waves
+  if (Math.abs(level - before) > .0008) splash(.5 + Math.sin(now / 900) * .35, (level - before) * 1.5);
+  for (let s = 0; s < 2; s++) {
+    for (let i = 1; i < N - 1; i++) v[i] += ((h[i - 1] + h[i + 1]) * .5 - h[i]) * .35 - h[i] * .004;
+    for (let i = 0; i < N; i++) { v[i] *= .985; h[i] += v[i] * .5; }
+  }
+  for (let i = 0; i < N; i++) {
+    const g = Math.max(0, Math.min(255, 128 + (h[i] + Math.sin(i * .21 + now / 700) * .02) * 127));
+    waveData.data[i * 4] = waveData.data[i * 4 + 1] = waveData.data[i * 4 + 2] = g; waveData.data[i * 4 + 3] = 255;
+  }
+  wctx.putImageData(waveData, 0, 0);
+  R.texture('uWave', waveCv);
+  R.set1('uLevel', level); R.set1('uTime', now / 1000);
+  R.draw();
+
+  // how much of the frame is under water decides the reading
+  const hotness = smooth(.12, .9, level);
+  degEl.textContent = Math.round(3 + 85 * hotness);
+  whereEl.textContent = hotness > .5 ? 'The sauna, ten on the bench' : 'The ice bath, one at a time';
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
