@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Athiti, Instrument_Sans, Noto_Serif_Display, Noto_Serif_Thai } from 'next/font/google';
+import 'lenis/dist/lenis.css';
 import './globals.css';
 
 // numbers and headlines: a light display serif; text: a plain grotesk; Thai text: Noto Serif Thai;
@@ -11,7 +12,7 @@ const mark = Athiti({ subsets: ['thai'], weight: '600', variable: '--font-mark',
 
 export const metadata: Metadata = {
   title: 'Ron Yen · Sauna and ice bath, Ari, Bangkok',
-  description: 'A social sauna at 88° and two ice baths at 3°, on Soi Ari 7. Seventy-five minute sessions, ten on the bench.',
+  description: 'A social sauna at 88° and four ice baths at 3°, on Soi Ari, Bangkok. Seventy-five minute sessions, ten on the bench.',
 };
 
 export const viewport: Viewport = {

@@ -3,6 +3,7 @@
 /* Two inks: the sauna printed in ember, the ice bath printed in a cold blue. Thin cream rules divide
    the page; nothing is boxed in cards. */
 :root {
+  --bar: 62px;   /* the height of the bar that follows down the page */
   --ember: #ff5a1f;
   --night: #170905;
   --cream: #f7ece2;
@@ -17,7 +18,11 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html { background: var(--night); }
+html { background: var(--night); scroll-behavior: smooth; }
+/* once the smooth scroll is running it eases the page itself, links included, and the browser's own
+   smoothing would fight it frame by frame */
+html.lenis { scroll-behavior: auto; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body { margin: 0; background: var(--night); color: var(--cream); font: 400 14px/1.5 var(--sans); overflow-x: hidden; }
 a { color: inherit; text-decoration: none; }
 img { display: block; max-width: 100%; }
@@ -93,7 +98,11 @@ img { display: block; max-width: 100%; }
 .plan-head p { margin: 0; max-width: 30em; color: var(--cream-soft); font-size: 15px; }
 /* the section holds still while the scroll runs the 75 minutes through it */
 .plan-track { position: relative; height: 640vh; }
-.plan-pin { position: sticky; top: 0; height: 100svh; display: flex; align-items: center; }
+.plan-pin { position: sticky; top: 0; height: 100svh; display: flex; align-items: center; padding-top: var(--bar); }
+/* the whole plan stays in view under the bar, however short the screen: it shrinks to the height left */
+@media (min-width: 861px) {
+  .plan-map { max-height: calc(100svh - var(--bar) - 56px); }
+}
 .plan-body { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: clamp(24px, 4vw, 56px); align-items: center; }
 .plan-note { margin: 14px 0 4px; font: 300 16px/1.45 var(--thai); color: var(--cream); min-height: 4.4em; }
 .plan-map .who { transition: none; }
@@ -178,7 +187,7 @@ img { display: block; max-width: 100%; }
   .plan-body { grid-template-columns: 1fr; }
   /* the phone frame: the same plan, drawn twice as large, with the frame following the walk */
   .plan-track { height: 560vh; }
-  .plan-pin { align-items: flex-start; padding-top: 16px; }
+  .plan-pin { align-items: flex-start; padding-top: calc(var(--bar) + 12px); }
   .plan-body { gap: 12px; }
   .plan-cam { height: 48svh; overflow: hidden; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .plan-cam .plan-map { transform-origin: 0 0; }
@@ -193,4 +202,235 @@ img { display: block; max-width: 100%; }
   .plan-now li b { font-size: 15px; }
   .plan-now li span { display: none; }
   .plan-now li em { margin: 0; font-size: 13px; text-align: right; }
+}
+
+/* ---------------- the bar that follows down the page ---------------- */
+.bar { position: fixed; top: 0; left: 0; right: 0; z-index: 30; display: flex; align-items: center; gap: 28px;
+  padding: 12px var(--gutter); background: var(--night); border-bottom: 1px solid var(--line);
+  transform: translateY(-100%); transition: transform .35s cubic-bezier(.2, .7, .2, 1); }
+.bar.is-shown { transform: none; }
+.bar .mark { margin-right: auto; font-size: 22px; }
+.bar nav { display: flex; gap: 26px; font-size: 14px; }
+.bar-book { display: flex; align-items: stretch; border: 1px solid var(--line); }
+.bar-next { display: flex; align-items: center; gap: 10px; padding: 7px 12px; font-size: 12px; color: var(--cream-soft); }
+.bar-book b { display: flex; align-items: center; padding: 7px 14px; background: var(--cream); color: #2a1008; font-weight: 500; font-size: 14px; }
+
+/* ---------------- sessions and packs ---------------- */
+.book { padding: clamp(64px, 9vw, 128px) var(--gutter); border-top: 1px solid var(--line); }
+/* the heading and its intro sit above both columns, so the list and the packs start on one line */
+.book-head { display: grid; gap: 14px; margin-bottom: 36px; }
+.book-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: clamp(32px, 5vw, 72px); }
+.book h2, .find h2 { margin: 0; font: 300 clamp(34px, 4.2vw, 60px)/1.04 var(--serif); letter-spacing: -.015em; }
+.book-head p { margin: 0; max-width: 34em; color: var(--cream-soft); font-size: 15px; }
+.book-grid { align-items: start; }
+/* grid items may shrink below their content, so the scrolling day strip cannot push the page wide */
+.book-grid > * { min-width: 0; }
+/* the list sizes its rows to its own column, not the window: one line needs about 700px */
+.book-grid > :first-child { container: book-list / inline-size; }
+@media (max-width: 1024px) {
+  .book-grid { grid-template-columns: 1fr; }
+}
+/* under the list, the packs use the width in two columns rather than stretching the dotted leaders:
+   the prices on the left, the note and the guest's own pack on the right */
+@media (min-width: 640px) and (max-width: 1024px) {
+  .book-packs { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); column-gap: 56px; align-items: start; }
+  .book-packs h3 { grid-column: 1 / -1; }
+  .book-packs dl { grid-column: 1; grid-row: 2 / span 2; }
+  .book-packs > p { grid-column: 2; grid-row: 2; margin-top: 0; }
+  .book-packs .member { grid-column: 2; grid-row: 3; }
+}
+
+.book-days { display: flex; gap: 4px; margin-bottom: 18px; overflow-x: auto; scrollbar-width: none; }
+.book-days button { all: unset; cursor: pointer; padding: 8px 12px; font-size: 13px; color: var(--cream-soft); border-bottom: 1px solid transparent; white-space: nowrap; }
+.book-days button[aria-selected="true"] { color: var(--cream); border-bottom-color: var(--ember); }
+.book-days button:focus-visible { outline: 2px solid var(--ice); }
+
+.book-list { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); }
+.book-list > li { border-bottom: 1px solid var(--line); }
+.book-list .row { display: grid; grid-template-columns: 64px 160px auto 1fr auto; align-items: center; gap: 18px; padding: 12px 0; }
+.book-list time { font: 300 22px/1 var(--serif); font-variant-numeric: tabular-nums; }
+.book-list .what { font-size: 14px; color: var(--cream-soft); }
+.book-list .left { font-size: 13px; color: var(--cream-soft); }
+.book-list .acts { display: flex; gap: 14px; justify-content: flex-end; align-items: center; }
+/* the actions are small tags, each with the locker tag's hole: cream to book, ice for a plunge */
+.book-list .acts button, .book-list .acts em { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 7px;
+  height: 30px; padding: 0 13px 0 10px; border-radius: 999px; font-size: 13px; font-weight: 500; white-space: nowrap; }
+.book-list .acts button::before, .book-list .acts em::before { content: ""; width: 6px; height: 6px; border-radius: 50%; }
+.book-list .acts button { cursor: pointer; background: var(--cream); color: #2a1008; transition: background .2s, transform .2s; }
+.book-list .acts button::before { background: var(--night); }
+.book-list .acts button:hover { background: #fff; transform: translateY(-1px); }
+.book-list .acts button.quiet { background: transparent; color: var(--ice); box-shadow: inset 0 0 0 1px rgba(191, 224, 242, .5); }
+.book-list .acts button.quiet::before { box-shadow: inset 0 0 0 1.5px currentColor; background: transparent; }
+.book-list .acts button.quiet:hover { background: rgba(191, 224, 242, .1); }
+.book-list .acts button:focus-visible { outline: 2px solid var(--ice); outline-offset: 3px; }
+.book-list .acts em { color: var(--ember); box-shadow: inset 0 0 0 1px rgba(255, 90, 31, .55); }
+.book-list .acts em::before { background: var(--ember); }
+
+/* the locker tag drops in below its row while the row makes room, and lifts away as it folds shut */
+.tag-slide { display: grid; grid-template-rows: 1fr; animation: tag-room .42s cubic-bezier(.2, .7, .2, 1) both; }
+.tag-slide > div { min-height: 0; }
+.tag-slide.is-moving > div { overflow: hidden; }
+.tag-slide .tag { animation: tag-drop .5s cubic-bezier(.2, .8, .25, 1) both; transform-origin: 26px 26px; }
+.tag-slide.is-closing { animation: tag-fold .32s cubic-bezier(.4, 0, .6, 1) both; }
+.tag-slide.is-closing .tag { animation: tag-lift .26s ease-in both; }
+.tag-swap { animation: tag-swap .35s ease-out both; }
+@keyframes tag-room { from { grid-template-rows: 0fr; } }
+@keyframes tag-fold { to { grid-template-rows: 0fr; } }
+@keyframes tag-drop { from { opacity: 0; transform: translateY(-18px) rotate(-1.5deg); } }
+@keyframes tag-lift { to { opacity: 0; transform: translateY(-12px); } }
+@keyframes tag-swap { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) {
+  /* still ends, so the tag still closes, but in an instant */
+  .tag-slide, .tag-slide .tag, .tag-slide.is-closing, .tag-slide.is-closing .tag, .tag-swap { animation-duration: 1ms; }
+}
+
+/* the locker tag: the band a sauna gives you to wear, with a hole for the strap and your number on it */
+.tag { position: relative; display: flex; margin: 4px 0 18px 64px; max-width: 560px; background: var(--cream); color: #2a1008;
+  border-radius: 14px; box-shadow: 0 18px 40px rgba(0, 0, 0, .35); }
+.tag::before { content: ""; width: 10px; border-radius: 14px 0 0 14px; background: var(--ember); }
+.tag-cold::before { background: var(--ice-ink); }
+.tag .hole { position: absolute; left: 22px; top: 22px; width: 14px; height: 14px; border-radius: 50%; background: var(--night); box-shadow: inset 0 0 0 2px rgba(42, 16, 8, .2); }
+.tag-body { flex: 1; padding: 18px 22px 18px 44px; }
+.tag-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; align-items: baseline; padding-bottom: 12px; border-bottom: 1px dashed rgba(42, 16, 8, .3); }
+.tag-kind { font: 300 22px/1.1 var(--serif); }
+.tag-when { font-size: 13px; color: rgba(42, 16, 8, .7); }
+.tag-say { margin: 14px 0 0; font-size: 14px; line-height: 1.55; }
+.tag-pay { border: 0; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+.tag-pay legend { font-size: 12px; color: rgba(42, 16, 8, .6); margin-bottom: 6px; }
+.tag-pay label { display: grid; grid-template-columns: 20px 1fr; gap: 0 8px; cursor: pointer; font-size: 14px; }
+.tag-pay label small { grid-column: 2; font-size: 12px; color: rgba(42, 16, 8, .6); }
+.tag-pay label.is-off { opacity: .45; cursor: default; }
+.tag-pay input { accent-color: var(--ember); margin: 3px 0 0; }
+.tag-acts { display: flex; gap: 18px; align-items: center; margin-top: 16px; }
+.tag-acts button { all: unset; cursor: pointer; font-size: 14px; }
+.tag-acts .go { background: #2a1008; color: var(--cream); padding: 9px 18px; border-radius: 999px; }
+.tag-acts .quiet { border-bottom: 1px solid currentColor; }
+.tag-acts button:focus-visible { outline: 2px solid var(--ember); outline-offset: 3px; }
+.tag-demo { margin: 12px 0 0; font-size: 12px; color: rgba(42, 16, 8, .55); }
+.tag-done { display: grid; grid-template-columns: 112px 1fr; gap: 18px; margin-top: 14px; align-items: center; }
+.tag-done .qr { width: 112px; height: 112px; display: block; }
+.tag-done .qr-ground { fill: #fff; }
+.tag-done .qr-ink { fill: #2a1008; }
+.tag-done > div { display: grid; gap: 4px; font-size: 13px; color: rgba(42, 16, 8, .75); }
+.tag-done .locker { font: 300 30px/1 var(--serif); color: #2a1008; }
+.tag-done .code { font: 500 13px/1 var(--sans); letter-spacing: .06em; color: #2a1008; }
+/* a narrow list: the time, then what and how full on one side, what is left and the tags on the other */
+@container book-list (max-width: 700px) {
+  .book-list .row { grid-template-columns: 54px 1fr auto; row-gap: 6px; }
+  .book-list .what { grid-column: 2; }
+  .book-list .row > .seats { grid-column: 2; grid-row: 2; }
+  .book-list .left { grid-column: 3; grid-row: 1; text-align: right; }
+  .book-list .acts { grid-column: 3; grid-row: 2; gap: 8px; }
+  .tag { margin-left: 0; }
+}
+/* and on a phone the tags stack */
+@container book-list (max-width: 460px) {
+  .book-list .acts { flex-direction: column; align-items: flex-end; gap: 6px; }
+  .tag-done { grid-template-columns: 96px 1fr; }
+  .tag-done .qr { width: 96px; height: 96px; }
+}
+
+.book-packs h3 { margin: 0 0 16px; font: 300 24px/1.2 var(--serif); }
+.book-packs dl { margin: 0; display: grid; gap: 12px; }
+.book-packs dl > div { display: flex; align-items: baseline; gap: 8px; }
+.book-packs dt { display: flex; align-items: baseline; gap: 8px; flex: 1; font-size: 15px; }
+.book-packs dt::after { content: ""; flex: 1; border-bottom: 1px dotted rgba(247, 236, 226, .3); transform: translateY(-4px); }
+.book-packs dt small { color: var(--cream-soft); font-size: 12px; }
+.book-packs dd { margin: 0; font: 300 20px/1 var(--serif); font-variant-numeric: tabular-nums; }
+.book-packs > p { margin: 20px 0 0; font-size: 13px; color: var(--cream-soft); }
+.book-packs .member { display: grid; gap: 4px; margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 13px; color: var(--cream-soft); }
+.book-packs .member b { color: var(--cream); font-weight: 500; }
+
+/* ---------------- find us ---------------- */
+.find { display: grid; grid-template-columns: 1fr 1.25fr; gap: clamp(32px, 5vw, 80px); align-items: center;
+  padding: clamp(64px, 9vw, 128px) var(--gutter); border-top: 1px solid var(--line); }
+.find-lead { margin: 18px 0 0; font: 300 22px/1.35 var(--serif); color: var(--cream-soft); }
+.find-lead b { color: var(--cream); font-weight: 400; }
+.find-steps { list-style: none; margin: 28px 0 32px; padding: 0; display: grid; gap: 14px; }
+.find-steps li { display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start; }
+.find-steps i { font-style: normal; width: 24px; height: 24px; border-radius: 50%; background: var(--cream); color: #2a1008; display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+.find-steps span { display: grid; font-size: 14px; color: var(--cream-soft); }
+.find-steps b { font: 400 19px/1.3 var(--serif); color: var(--cream); }
+.find-steps b:lang(th) { font: 600 19px/1.3 var(--font-mark), var(--thai); }
+.find-facts { margin: 0; display: grid; }
+.find-facts > div { display: grid; grid-template-columns: 90px 1fr; gap: 16px; padding: 14px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.find-facts dt { color: var(--cream-soft); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; padding-top: 2px; }
+.find-facts dd { margin: 0; display: grid; gap: 3px; }
+.find-facts dd b { font-weight: 500; font-variant-numeric: tabular-nums; margin-left: 6px; }
+.find-map { margin: 0; }
+.find-map svg { display: block; width: 100%; background: #1a0b06; border-radius: 10px; }
+.find-wide { aspect-ratio: 1; }
+/* on a wide screen the square map stops growing at the screen height, or 640px, and the text takes the rest */
+@media (min-width: 861px) {
+  .find { grid-template-columns: minmax(0, 1fr) auto; }
+  .find-text { max-width: 600px; }
+  .find-map { width: min(640px, calc(100svh - var(--bar) - 96px), 52vw); }
+}
+.find-tall { aspect-ratio: 220 / 270; }
+.find-map .find-tall { display: none; }
+.find-map figcaption { margin-top: 8px; font-size: 11px; color: rgba(247, 236, 226, .45); text-align: right; }
+/* the map is cropped close, so lines keep their screen width rather than growing with the crop */
+.find-map path, .find-map rect, .find-map circle { vector-effect: non-scaling-stroke; }
+.r-lane, .r-street, .r-major, .r-rail, .r-walk { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.r-lane { stroke: rgba(247, 236, 226, .07); stroke-width: 1; }
+.r-street { stroke: rgba(247, 236, 226, .2); stroke-width: 2; }
+.r-major { stroke: rgba(247, 236, 226, .32); stroke-width: 9; }
+.r-rail { stroke: var(--ember); stroke-width: 2; stroke-dasharray: 8 6; opacity: .7; }
+.r-walk { stroke: var(--ice); stroke-width: 3.5; stroke-dasharray: 1 7; }
+.r-name { fill: rgba(247, 236, 226, .5); font-family: var(--sans); letter-spacing: .06em; }
+.r-leg { fill: var(--ice); font-family: var(--sans); font-weight: 500; }
+.r-place { fill: var(--cream); font-family: var(--sans); font-weight: 500; }
+.r-mark { fill: var(--cream); font-family: var(--font-mark), var(--thai); font-weight: 600; }
+.r-platform { fill: var(--night); stroke: var(--ember); stroke-width: 2; }
+.r-drop { fill: var(--ice); }
+.r-step circle { fill: var(--cream); }
+.r-step text { fill: #2a1008; font-family: var(--sans); font-weight: 600; }
+
+/* ---------------- foot ---------------- */
+.foot { padding: clamp(72px, 9vw, 128px) var(--gutter) 44px; border-top: 1px solid var(--line); font-size: 13px; color: var(--cream-soft); }
+/* the name written in the steam: the pane is fogged until the footer arrives, then a finger writes it from
+   left to right and the letters start to drip */
+.steam { display: block; width: 100%; height: auto; }
+.steam-panes .steam-tall { display: none; }
+.steam-word { font-family: var(--font-mark), var(--thai); font-weight: 600; }
+.steam-veil { fill: rgba(247, 236, 226, .2); }
+.steam-frame { fill: none; stroke: rgba(247, 236, 226, .3); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+/* a drip: a bead that runs down from the letter and leaves a clear trail behind it */
+.steam-drip line { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.steam-drip circle { opacity: 0; }
+.steam-panes.is-written .steam-hand { animation: steam-write 1.9s cubic-bezier(.45, .05, .4, 1) .25s forwards; }
+.steam-panes.is-written .steam-drip > * { animation: 3s cubic-bezier(.3, .05, .25, 1) both; animation-delay: inherit; }
+.steam-panes.is-written .steam-drip line { animation-name: steam-trail; }
+.steam-panes.is-written .steam-drip circle { animation-name: steam-bead; }
+@keyframes steam-write { to { transform: translateX(1300px); } }
+@keyframes steam-trail { to { stroke-dashoffset: 0; } }
+@keyframes steam-bead { 0% { opacity: 0; } 6% { opacity: 1; } to { opacity: 1; transform: translateY(var(--run)); } }
+@media (prefers-reduced-motion: reduce) {
+  .steam .steam-hand { display: none; }
+  .steam .steam-drip line { stroke-dashoffset: 0; }
+  .steam .steam-drip circle { opacity: 1; transform: translateY(var(--run)); }
+  .steam-panes.is-written .steam-drip > * { animation: none; }
+}
+.steam-gloss { margin: 14px 0 0; font: italic 300 clamp(16px, 1.4vw, 22px) var(--serif); }
+.foot-cols { margin-top: 56px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; }
+.foot-cols p { margin: 0; display: grid; align-content: start; gap: 2px; }
+.foot-cols strong { margin-bottom: 6px; color: var(--cream); font-weight: 500; }
+.foot-top { justify-self: start; margin-top: 10px; color: var(--cream); text-decoration: none; border-bottom: 1px solid rgba(247, 236, 226, .4); }
+.foot-top::after { content: " ↑"; }
+.foot-note { margin: 40px 0 0; max-width: 46em; font-size: 12px; color: rgba(247, 236, 226, .45); }
+
+@media (max-width: 860px) {
+  .bar nav, .bar-next .seats { display: none; }
+  .bar .mark { font-size: 20px; }
+  .bar-next { padding: 6px 10px; }
+  /* on a phone the map comes straight after the steps it numbers, and the address and hours follow */
+  .find { grid-template-columns: 1fr; gap: 0; }
+  .find-text { display: contents; }
+  .find-map { order: 1; margin-bottom: 28px; }
+  .find-facts { order: 2; }
+  .find-map .find-wide { display: none; }
+  .find-map .find-tall { display: block; }
+  .foot-cols { grid-template-columns: 1fr; gap: 22px; margin-top: 40px; }
+  .steam-panes .steam-wide { display: none; }
+  .steam-panes .steam-tall { display: block; }
 }

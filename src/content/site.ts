@@ -1,15 +1,20 @@
 // Everything the homepage says, in one place. Sections read from here; nothing is typed twice.
 // Ron Yen is a fictional studio built as a portfolio piece; the street is real, the studio is not.
 
+import { ariMap } from './ari-map.ts';
+
 export type Photo = { src: string; width: number; height: number; alt: string };
+
+// minutes on foot from BTS Ari, measured along real streets by scripts/build-map.mjs, never typed by hand
+const walkFromBts = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'][ariMap.walk.minutes] ?? String(ariMap.walk.minutes);
 
 export const studio = {
   wordmark: 'ร้อน·เย็น',
   // for visitors who cannot read the Thai mark
   wordmarkGloss: 'Ron Yen · hot, cold',
   name: 'Ron Yen',
-  area: 'Soi Ari 7',
-  address: ['Soi Phahonyothin 7, Ari', 'Phaya Thai, Bangkok 10400'],
+  area: 'Soi Ari',
+  address: ['Soi Ari (Soi Phahonyothin 7)', 'Samsen Nai, Phaya Thai, Bangkok 10400'],
   sauna: { temp: 88, seats: 10 },
   iceBath: { temp: 3, tubs: 4 },
   deck: { temp: 31, seats: 12 },
@@ -41,15 +46,15 @@ export const sessionKinds = {
 } as const satisfies Record<SessionKind, { name: string; minutes: number; places: number; points: number | null; uses: readonly string[] }>;
 
 export const nav = [
-  { label: 'A round', href: '#round' },
-  { label: 'The rooms', href: '#rooms' },
+  { label: 'The studio', href: '#round' },
+  { label: 'Sessions', href: '#book' },
   { label: 'Packs', href: '#packs' },
   { label: 'Find us', href: '#find' },
 ] as const;
 
 export const hero = {
   headline: ['Sweat at 88°.', 'Then the ice.'],
-  text: 'Seventy-five minutes, as many rounds as you like. Two minutes from BTS Ari, open from 06:30.',
+  text: `Seventy-five minutes, as many rounds as you like. ${walkFromBts} minutes on foot from BTS Ari, open from 06:30.`,
   book: 'Book a session',
   // the sauna fills the page in the hot ink; the ice bath is only ever seen through the window
   sauna: {
@@ -62,15 +67,12 @@ export const hero = {
   where: { hot: 'On the bench, ten at a time', between: 'Out of the heat', cold: 'In the ice bath, one at a time' },
 } as const;
 
-// Demo data for "today": a session is 75 minutes and seats ten; null seats means the private 20:00
-export type Slot = { time: string; taken: number | null };
-export const today = {
-  label: 'Today, Tue 20 Oct',
-  slots: [
-    { time: '17:00', taken: 10 },
-    { time: '18:30', taken: 9 },
-    { time: '20:00', taken: null },
-  ] satisfies Slot[],
+export const book = {
+  heading: 'Book a session',
+  text: 'Pick a day and a time. A full session has a waitlist; plunge-only places start with each social session.',
+  packsHeading: 'Packs and prices',
+  packsNote: 'A pack covers a social session, or two plunges in its place. Cancel six hours ahead and it goes back on the pack.',
+  signedIn: 'Signed in as',
 };
 
 // A pack either holds points or covers one session a day for 30 days; the rest are single tickets.
@@ -126,3 +128,34 @@ export const round = {
     { at: 73, text: 'Seventy-five minutes, and everyone is out.' },
   ],
 } as const;
+
+// "Find us": a real point on Soi Ari (Soi Phahonyothin 7); the studio itself is invented. The map and the walk from BTS Ari
+// are drawn from OpenStreetMap by scripts/build-map.mjs into src/content/ari-map.ts.
+export const findUs = {
+  heading: 'Find us',
+  studioAt: [13.78207, 100.54353] as readonly [number, number],
+  address: ['Soi Ari (Soi Phahonyothin 7)', 'Samsen Nai, Phaya Thai, Bangkok 10400'],
+  hours: [
+    { days: 'Mon–Fri', time: '06:30 – 21:15' },
+    { days: 'Sat–Sun', time: '08:00 – 21:15' },
+  ],
+  line: '@ronyen.ari',
+  station: 'BTS Ari',
+  lead: 'on foot from BTS Ari',
+  // the walk, one step per point on the map; the first two end with that leg's distance from the map
+  steps: [
+    { title: 'BTS Ari', text: 'Come down on the Soi Ari side and walk north for' },
+    { title: 'Turn left into Soi Ari', text: 'Walk along it for' },
+    { title: studio.wordmark, text: 'On your left' },
+  ],
+  facts: { address: 'Address', open: 'Open', line: 'LINE' },
+  credit: 'Map data © OpenStreetMap contributors',
+};
+
+// The foot of the page: the studio's name written in the steam on a sauna window, then the plain facts
+export const foot = {
+  words: ['ร้อน', 'เย็น'] as const,
+  hours: 'Open daily',
+  top: 'Back to the top',
+  note: 'A fictional studio, made as a portfolio piece: the street is real, the studio is not, and nothing on this page books or charges anything. Photographs from Unsplash. Map data © OpenStreetMap contributors.',
+};

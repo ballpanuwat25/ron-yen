@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { placeName, placeTemp, round } from '@/content/site';
 import { whereAt } from '@/lib/walk';
+import { onWheelTurn, smooth } from '@/lib/smooth';
 
 // The studio from above, drawn in the page's thin cream line: reception, changing rooms, sauna, showers,
 // the four tubs and the deck, with the one-way route through them. Three dots are the three ways to spend
@@ -49,7 +50,9 @@ export default function Plan() {
 
       // The scroll is the clock: the top of the track is minute 0, the bottom minute 75. The clock eases
       // toward where the scroll is rather than jumping a wheel notch at a time.
-      const track = trackRef.current!.getBoundingClientRect();
+      const trackEl = trackRef.current;
+      if (!trackEl) { raf = requestAnimationFrame(tick); return; }
+      const track = trackEl.getBoundingClientRect();
       const goal = Math.min(1, Math.max(0, -track.top / (track.height - innerHeight))) * round.minutes;
       shown = first || reduced || Math.abs(goal - shown) < .02 ? goal : shown + (goal - shown) * (1 - Math.exp(-dt / 220));
       const q = Math.round(shown * 4) / 4;
@@ -158,6 +161,59 @@ export default function Plan() {
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  // Past minute 75 the plan lets go, and the stretch between the end of the clock (stop a) and the top of
+  // the next section (stop b) is a gate rather than a page. The page's smooth scroll hands each wheel turn
+  // here first, so the turn that would carry the page past 75 eases it to 75 instead and it stops there;
+  // only a new turn, begun once the page rests at 75, glides on to the next section. Going up, the top of
+  // the next section is the same kind of stop, and a new turn there glides back to 75. Touch, keys and
+  // the scrollbar scroll freely and are carried on if they come to rest inside the stretch.
+  useEffect(() => {
+    const trackEl = trackRef.current, next = trackEl?.closest('section')?.nextElementSibling;
+    if (!trackEl || !next) return;
+    const stops = () => [scrollY + trackEl.getBoundingClientRect().bottom - innerHeight, scrollY + next.getBoundingClientRect().top] as const;
+    const near = (y: number, s: number) => Math.abs(y - s) <= 2;
+    const ease = (t: number) => (t < .5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+    let gliding = false, lastTurn = 0, last = scrollY, dir = 0, rest = 0;
+    const glide = (to: number) => {
+      const lenis = smooth();
+      if (!lenis) { scrollTo({ top: to, behavior: 'smooth' }); return; }
+      gliding = true;
+      lenis.scrollTo(to, { duration: 1.1, easing: ease, lock: true, onComplete: () => { gliding = false; } });
+    };
+
+    const stopWheel = onWheelTurn(({ deltaY, event }) => {
+      const lenis = smooth();
+      if (!lenis || !(event instanceof WheelEvent)) return true;
+      const now = performance.now(), fresh = now - lastTurn > 220;
+      lastTurn = now;
+      // the turn is the plan's: the page does not scroll for it
+      const take = () => { if (event.cancelable) event.preventDefault(); return false; };
+      if (gliding) return take();
+      const [a, b] = stops(), to = lenis.targetScroll, at = lenis.scroll;
+      if (deltaY > 0) {
+        if (to < a - 1 && to + deltaY > a) { lenis.scrollTo(a); return take(); }
+        if (to >= a - 1 && to < b - 1) { if (fresh && near(at, a) || at > a + 2) glide(b); return take(); }
+      } else if (deltaY < 0) {
+        if (to > b + 1 && to + deltaY < b) { lenis.scrollTo(b); return take(); }
+        if (to > a + 1 && to <= b + 1) { if (fresh && near(at, b) || at < b - 2) glide(a); return take(); }
+      }
+      return true;
+    });
+
+    // anything else that comes to rest inside the stretch is taken on the way it was going
+    const onScroll = () => {
+      if (scrollY !== last) dir = Math.sign(scrollY - last);
+      last = scrollY;
+      clearTimeout(rest);
+      rest = window.setTimeout(() => {
+        const [a, b] = stops();
+        if (!gliding && scrollY > a + 2 && scrollY < b - 2) glide(dir > 0 ? b : a);
+      }, 200);
+    };
+    addEventListener('scroll', onScroll, { passive: true });
+    return () => { stopWheel(); removeEventListener('scroll', onScroll); clearTimeout(rest); };
+  }, []);
+
   const now = round.ways.map((w, i) => ({ ...w, ...whereAt(w.stays, minute, i) }));
   const loyly = now.some((w) => w.place === 'loyly');
   const note = noteAt(minute);
@@ -226,7 +282,7 @@ export default function Plan() {
             <rect x="66" y="431" width="14" height="10" className="tablet-screen" />
             <text x="50" y="462" className="note">check in</text>
             <text x="40" y="362">Reception</text>
-            <text x="96" y="592">Way in, from Soi Ari 7</text>
+            <text x="96" y="592">Way in, from Soi Ari</text>
           </g>
           <g className="room room-lockers">
             <rect {...box(ROOM.lockers)} />

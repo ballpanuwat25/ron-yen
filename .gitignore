@@ -25,3 +25,6 @@ next-env.d.ts
 # full-size photo sources (re-export with scripts/export-photos.py)
 /design/photos-src/
 /design/mockup/src/
+
+# the OpenStreetMap download scripts/build-map.mjs caches (rebuild with --refresh)
+/scripts/.cache/

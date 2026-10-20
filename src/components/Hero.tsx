@@ -2,7 +2,8 @@
 
 import Image from 'next/image';
 import { useEffect, useRef } from 'react';
-import { hero, nav, studio, today } from '@/content/site';
+import { hero, nav, studio } from '@/content/site';
+import { demoNow, upcoming } from '@/content/demo';
 import { mountHeroGlass } from '@/lib/glass';
 import Seats from './Seats';
 
@@ -40,7 +41,7 @@ export default function Hero() {
   }, []);
 
   return (
-    <section className="hero" ref={heroRef}>
+    <section className="hero" id="top" ref={heroRef}>
       <picture className="hero-base">
         <source media="(max-width: 860px)" srcSet={hero.sauna.tall.src} />
         <img ref={saunaRef} src={hero.sauna.wide.src} alt="" width={hero.sauna.wide.width} height={hero.sauna.wide.height} />
@@ -60,13 +61,13 @@ export default function Hero() {
       <div className="hero-grid">
         <div className="hero-info">
           <div>
-            <span className="kicker">{today.label}</span>
+            <span className="kicker">{demoNow.day.label}</span>
             <ul className="today">
-              {today.slots.map((s) => (
+              {upcoming.map((s) => (
                 <li key={s.time}>
                   <time>{s.time}</time>
-                  {s.taken === null ? <span className="seats" /> : <Seats taken={s.taken} />}
-                  <span className="left">{s.taken === null ? 'Private, up to six' : s.taken >= 10 ? 'Full, join the waitlist' : `${10 - s.taken} of 10 left`}</span>
+                  {s.kind === 'private' ? <span className="seats" /> : <Seats taken={s.taken} />}
+                  <span className="left">{s.kind === 'private' ? 'Private, up to six' : s.taken >= 10 ? 'Full, join the waitlist' : `${10 - s.taken} of 10 left`}</span>
                 </li>
               ))}
             </ul>
