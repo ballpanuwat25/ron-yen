@@ -29,6 +29,48 @@ a { color: inherit; text-decoration: none; }
 img { display: block; max-width: 100%; }
 :focus-visible { outline: 2px solid var(--ice); outline-offset: 3px; }
 
+/* ---------------- loading: the sauna heating up ---------------- */
+.loader { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; overflow: hidden; background: var(--night);
+  --heat: 0; transition: opacity .9s ease, visibility 0s .9s;
+  /* if the page's script never runs, the screen still gives way */
+  animation: loader-give-up 0s 8.5s forwards; }
+.loader.is-open { opacity: 0; visibility: hidden; pointer-events: none; }
+@keyframes loader-give-up { to { opacity: 0; visibility: hidden; } }
+html:has(.loader:not(.is-open)) { overflow: hidden; }
+/* the stove's light, rising from the floor as the room heats */
+.loader-glow { position: absolute; inset: 0; pointer-events: none; opacity: var(--heat);
+  background: radial-gradient(70% 55% at 50% 110%, rgba(255, 110, 40, .55), rgba(255, 90, 31, .16) 45%, transparent 75%);
+  transform: translateY(calc((1 - var(--heat)) * 18%)); }
+.loader-read { position: relative; display: grid; justify-items: center; gap: 10px; }
+.loader-dot { width: 28px; height: 28px; }
+.loader-dot .ring { fill: var(--cream); }
+.loader-dot .hot { fill: var(--ember); }
+.loader-dot .cold { fill: var(--ice); }
+.loader-deg { margin: 6px 0 0; font: 200 clamp(96px, 14vw, 180px)/.85 var(--serif); letter-spacing: -.04em; font-variant-numeric: tabular-nums; color: var(--cream); }
+.loader-say { margin: 0; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--cream-soft); }
+
+/* ---------------- not found: an empty locker ---------------- */
+.lost { min-height: 100svh; display: grid; place-items: center; padding: 96px var(--gutter) 64px; position: relative; overflow: hidden;
+  background: radial-gradient(60% 50% at 50% 100%, rgba(255, 90, 31, .12), transparent 70%), var(--night); }
+.lost-mark { position: absolute; left: var(--gutter); top: 22px; }
+/* the tag hangs from a hook by a cord through its hole, and sways a little */
+.lost-hang { display: grid; justify-items: center; transform-origin: 50% 0; animation: lost-sway 6s ease-in-out infinite; }
+@keyframes lost-sway { 0%, 100% { transform: rotate(-2.2deg); } 50% { transform: rotate(1.8deg); } }
+@media (prefers-reduced-motion: reduce) { .lost-hang { animation: none; transform: rotate(-1.5deg); } }
+.lost-hook { width: 18px; height: 18px; border-radius: 50%; border: 3px solid rgba(247, 236, 226, .55); background: var(--night); }
+.lost-cord { position: relative; z-index: 1; width: 2px; height: 72px; margin-bottom: -36px; background: linear-gradient(var(--ember), #b8461c); border-radius: 2px; }
+.lost-tag { position: relative; width: min(360px, 84vw); padding: 44px 30px 30px; border-radius: 22px 22px 18px 18px; background: var(--cream); color: #2a1008;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, .55); border-top: 10px solid var(--ember); text-align: center; }
+.lost-hole { position: absolute; left: 50%; top: 12px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: var(--night);
+  box-shadow: inset 0 0 0 2px rgba(42, 16, 8, .25); }
+.lost-no { margin: 0; font: 200 clamp(84px, 22vw, 120px)/.9 var(--serif); letter-spacing: -.04em; }
+.lost-no small { display: block; margin-bottom: 6px; font: 500 11px var(--sans); letter-spacing: .18em; text-transform: uppercase; color: rgba(42, 16, 8, .55); }
+.lost h1 { margin: 18px 0 0; font: 300 26px/1.15 var(--serif); }
+.lost-text { margin: 10px 0 0; font-size: 14px; line-height: 1.5; color: rgba(42, 16, 8, .72); }
+.lost-act { display: grid; gap: 12px; justify-items: center; margin-top: 24px; }
+.lost-home { padding: 13px 22px; border-radius: 999px; background: #2a1008; color: var(--cream); font-weight: 500; font-size: 14px; }
+.lost-book { font-size: 14px; border-bottom: 1px solid currentColor; }
+
 /* ---------------- hero ---------------- */
 /* the sauna wall, its window cut out; behind the window, the fogged view of the ice */
 .hero { position: relative; height: 100svh; min-height: 640px; overflow: hidden; background: var(--night); }

@@ -10,6 +10,8 @@ type Options = {
   photo: HTMLImageElement;
   // paints what the glass shows before beads go on it, at the pane's size in device pixels
   paintFog: (f: CanvasRenderingContext2D, w: number, h: number, dpr: number) => void;
+  // when the page is ready to be looked at, so the first wipe is seen; returns the way to stop waiting
+  whenSeen?: (go: () => void) => () => void;
 };
 
 const HOLD = 4000;      // ms a wiped patch stays clear
@@ -24,7 +26,7 @@ const smooth = (a: number, b: number, x: number) => {
 type Drip = { pts: [number, number][]; v: number; w: number; slow: number; born: number; fade: number; seed: number };
 type Puff = { x: number; y: number; vx: number; vy: number; r: number; grow: number; life: number; max: number; seed: number };
 
-export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog }: Options): () => void {
+export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSeen = (go) => { go(); return () => {}; } }: Options): () => void {
   const cx = fog.getContext('2d')!;
   const sx = steam.getContext('2d')!;
   const coarse = matchMedia('(pointer: coarse)').matches;
@@ -245,11 +247,12 @@ export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog }: Opti
   photo.addEventListener('load', build);
   build();
   raf = requestAnimationFrame(frame);
-  const demoTimer = window.setTimeout(() => { if (performance.now() - lastInput > 1500) demoWipe(); }, 1200);
+  let demoTimer = 0;
+  const stopWaiting = whenSeen(() => { demoTimer = window.setTimeout(() => { if (performance.now() - lastInput > 1500) demoWipe(); }, 700); });
 
   return () => {
     cancelAnimationFrame(raf);
-    clearTimeout(demoTimer); clearInterval(demo);
+    stopWaiting(); clearTimeout(demoTimer); clearInterval(demo);
     pane.removeEventListener('pointermove', onPaneMove);
     pane.removeEventListener('pointerdown', onPaneDown);
     pane.removeEventListener('pointerleave', onPaneUp);

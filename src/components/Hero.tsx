@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { heroWall } from '@/content/hero-wall';
 import { hero, nav, studio } from '@/content/site';
 import { mountHeroGlass } from '@/lib/glass';
+import { whenOpen } from '@/lib/opening';
 
 // The first view is the sauna itself: its wall, the bench and the light under it, and a window in the
 // wall onto the ice bath outside, fogged over. Wiping the glass clears it to the ice. The wall is a
@@ -60,7 +61,7 @@ export default function Hero() {
       g.fillStyle = ICE.veil; g.fillRect(0, 0, w, h);
     };
     let unmount: (() => void) | undefined;
-    const start = () => { unmount = mountHeroGlass({ hero: el, pane, fog, steam, photo: ice, paintFog }); };
+    const start = () => { unmount = mountHeroGlass({ hero: el, pane, fog, steam, photo: ice, paintFog, whenSeen: whenOpen }); };
     if (ice.complete && ice.naturalWidth) start(); else ice.addEventListener('load', start, { once: true });
     return () => { watch.disconnect(); ice.removeEventListener('load', start); unmount?.(); };
   }, []);

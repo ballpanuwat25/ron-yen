@@ -150,6 +150,18 @@ export const findUs = {
   credit: 'Map data © OpenStreetMap contributors',
 };
 
+// The loading screen: the sauna heating up, from the cold outside to the bench, as the first view loads
+export const loader = { heating: 'Heating the sauna', ready: 'Ready' };
+
+// The page for an address the site does not have: an empty locker, on the booking's locker tag
+export const lost = {
+  tag: 'Locker',
+  heading: 'This locker is empty.',
+  text: 'The page you were looking for is not here. The sauna is, at 88°.',
+  home: 'Back to the studio',
+  book: 'Book a session',
+};
+
 // The foot of the page: the studio's name written in the steam on a sauna window, then the plain facts
 export const foot = {
   words: ['ร้อน', 'เย็น'] as const,
