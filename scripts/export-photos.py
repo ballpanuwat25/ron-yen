@@ -1,7 +1,8 @@
 """Export the site photographs from design/photos-src into public/images.
 
-The hero prints the photos in two inks with CSS (ember for the sauna, cold blue for the ice bath),
-so here they are only cropped to their slots. Sources are Unsplash; the id is in each file name.
+The page does any colouring itself (the footer prints the stones in ember and the ice in cold blue),
+so here they are only cropped to their slots. Sources are Unsplash; the id is in each file name. The
+hero's sauna wall is generated, and built by scripts/build-hero-wall.py.
 
     python -I scripts/export-photos.py               every photo
     python -I scripts/export-photos.py window-floes  just the photos named
@@ -16,8 +17,7 @@ OUT = ROOT / 'public' / 'images'
 
 # name: (source, pre-crop box in source pixels or None, exact size, crop focus)
 PHOTOS = {
-    'hero-hot-wide': ('1749561532113-80b8e0f918bd.jpg', None, (2000, 1250), (.5, .55)),   # steam over the stove stones
-    'hero-hot-tall': ('1749561532113-80b8e0f918bd.jpg', None, (1000, 1600), (.5, .55)),
+    'hero-hot-wide': ('1749561532113-80b8e0f918bd.jpg', None, (2000, 1250), (.5, .55)),   # steam over the stove stones (the footer's hot side)
     'window-floes':  ('1771508784012-60d2b3b0cc92.jpg', None, (1600, 1000), (.5, .5)),    # ice floes on dark water
 }
 

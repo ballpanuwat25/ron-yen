@@ -35,12 +35,11 @@ export const week: Day[] = NAMES.map(([dow, date], d) => {
   return { key: `2026-10-${date}`, short: `${dow} ${date}`, label: `${dow === 'Tue' ? 'Today, ' : ''}${dow} ${date} Oct`, weekend, sessions };
 });
 
-// today's evening, as the hero and the header show it: the 17:00 is full with two waiting, one place at 18:30
+// today's evening, as the header and the booking list show it: the 17:00 is full with two waiting, one place at 18:30
 const today = week[0];
 Object.assign(today.sessions.find((s) => s.time === '17:00')!, { taken: 10, waiting: 2 });
 Object.assign(today.sessions.find((s) => s.time === '18:30')!, { taken: 9, waiting: 0 });
-export const demoNow = { day: today, time: '17:40' };
-export const upcoming = today.sessions.filter((s) => s.time > demoNow.time || s.time === '17:00');
+const demoNow = { day: today, time: '17:40' };
 export const nextOpen = today.sessions.find((s) => s.time > demoNow.time && s.kind === 'social' && s.taken < 10)!;
 
 // the demo member: a 10-session pack with six points left (three social sessions or six plunges)

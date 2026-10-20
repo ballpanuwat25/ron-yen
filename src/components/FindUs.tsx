@@ -1,6 +1,5 @@
 import { ariMap } from '@/content/ari-map';
 import { findUs } from '@/content/site';
-import { DROP } from './Seats';
 
 // Where the studio is, as the walk from BTS Ari in three steps beside a map cropped to that walk. The
 // streets come from OpenStreetMap; the walk is routed along them, and its legs (the metres on the map
@@ -12,7 +11,9 @@ const start = m.walk.route.match(/^M([\d.]+) ([\d.]+)/)!.slice(1).map(Number) as
 const points: Pt[] = [start, ...m.walk.legs.map((l) => l.to)];
 const angle = (a: Pt, b: Pt) => Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI;
 // where each numbered step sits beside its point, in screen pixels, clear of the platform and the drop
-const STEP_AT: Pt[] = [[-24, 0], [16, 4], [16, 14]];
+const STEP_AT: Pt[] = [[-24, 0], [16, 4], [24, 24]];
+// the map data holds the BTS as its two tracks, which pull apart at this scale; one is drawn, as one line
+const RAIL = 'M' + m.rail.split('M')[1];
 
 // k is how many screen pixels one map unit draws at, so text and markers keep their size in either crop
 function Map({ viewBox, k, className }: { viewBox: string; k: number; className: string }) {
@@ -22,8 +23,8 @@ function Map({ viewBox, k, className }: { viewBox: string; k: number; className:
       <path d={m.roads.lane} className="r-lane" />
       <path d={m.roads.street} className="r-street" />
       <path d={m.roads.major} className="r-major" />
-      {/* the BTS runs overhead along Phahonyothin Road */}
-      <path d={m.rail} className="r-rail" />
+      {/* the BTS runs overhead along Phahonyothin Road, drawn in the Sukhumvit line's own green */}
+      <path d={RAIL} className="r-rail" />
       {/* street names placed by hand, clear of the walk */}
       <text className="r-name" fontSize={11 / k} transform={`translate(${T[0] - 10} ${T[1] - 22}) rotate(${angle(S, T)})`}>Phahonyothin Rd · BTS overhead</text>
       <text className="r-name" fontSize={11 / k} transform={`translate(${P[0] - 70} ${P[1] - 62}) rotate(${angle(P, T)})`}>Soi Ari</text>
@@ -37,10 +38,18 @@ function Map({ viewBox, k, className }: { viewBox: string; k: number; className:
             transform={`translate(${(a[0] + b[0]) / 2} ${(a[1] + b[1]) / 2}) rotate(${up}) translate(0 ${-9 / k})`}>{l.metres} m</text>
         );
       })}
-      <rect x={-30 / k} y={-7 / k} width={60 / k} height={14 / k} rx={3 / k} className="r-platform" transform={`translate(${S[0]} ${S[1]}) rotate(${angle(S, T)})`} />
-      <text className="r-place" fontSize={14 / k} x={S[0] + 16 / k} y={S[1] + 22 / k}>{findUs.station}</text>
-      <path d={DROP} className="r-drop" transform={`translate(${P[0]} ${P[1]}) scale(${1.6 / k}) translate(-9 -23)`} />
-      <text className="r-mark" fontSize={17 / k} x={P[0] - 14 / k} y={P[1] - 16 / k} textAnchor="end" lang="th">{findUs.steps[2].title}</text>
+      {/* the station as a transit map marks it, with its code on the line */}
+      <circle cx={S[0]} cy={S[1]} r={8 / k} className="r-station" />
+      <text className="r-place" fontSize={14 / k} x={S[0] + 16 / k} y={S[1] + 22 / k}>
+        {findUs.station}<tspan className="r-code" fontSize={11 / k} dx={6 / k}>{findUs.stationCode}</tspan>
+      </text>
+      {/* the studio marked with the dot of its own name, ร้อน·เย็น: half ember, half ice */}
+      <g className="r-studio" transform={`translate(${P[0]} ${P[1]}) scale(${1 / k})`}>
+        <circle r="14" />
+        <path d="M0 -10.5A10.5 10.5 0 0 0 0 10.5Z" className="hot" />
+        <path d="M0 -10.5A10.5 10.5 0 0 1 0 10.5Z" className="cold" />
+      </g>
+      <text className="r-mark" fontSize={17 / k} x={P[0] - 22 / k} y={P[1] + 6 / k} textAnchor="end" lang="th">{findUs.steps[2].title}</text>
       {points.map(([x, y], i) => (
         <g key={i} className="r-step" transform={`translate(${x + STEP_AT[i][0] / k} ${y + STEP_AT[i][1] / k})`}>
           <circle r={11 / k} />

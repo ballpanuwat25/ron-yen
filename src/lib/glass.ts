@@ -1,16 +1,15 @@
 // The hero's two moving parts, drawn on canvases: the fogged window you wipe to see the ice bath,
-// and the steam that trails the pointer around the sauna. Browser-only; the Hero mounts it.
-
-export type Reading = { degrees: number; cleared: number };
+// and the steam rising in the sauna, which the pointer stirs. Browser-only; the Hero mounts it.
 
 type Options = {
   hero: HTMLElement;
   pane: HTMLElement;
   fog: HTMLCanvasElement;
   steam: HTMLCanvasElement;
-  // the sauna photo as the page shows it, so the fog can be the same picture seen through wet glass
-  sauna: HTMLImageElement;
-  onReading: (r: Reading) => void;
+  // the picture behind the glass, which the fog is painted from; the glass is rebuilt when it loads
+  photo: HTMLImageElement;
+  // paints what the glass shows before beads go on it, at the pane's size in device pixels
+  paintFog: (f: CanvasRenderingContext2D, w: number, h: number, dpr: number) => void;
 };
 
 const HOLD = 4000;      // ms a wiped patch stays clear
@@ -25,7 +24,7 @@ const smooth = (a: number, b: number, x: number) => {
 type Drip = { pts: [number, number][]; v: number; w: number; slow: number; born: number; fade: number; seed: number };
 type Puff = { x: number; y: number; vx: number; vy: number; r: number; grow: number; life: number; max: number; seed: number };
 
-export function mountHeroGlass({ hero, pane, fog, steam, sauna, onReading }: Options): () => void {
+export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog }: Options): () => void {
   const cx = fog.getContext('2d')!;
   const sx = steam.getContext('2d')!;
   const coarse = matchMedia('(pointer: coarse)').matches;
@@ -49,20 +48,11 @@ export function mountHeroGlass({ hero, pane, fog, steam, sauna, onReading }: Opt
     fog.width = W * DPR; fog.height = H * DPR;
     steam.width = hero.clientWidth * DPR; steam.height = hero.clientHeight * DPR;
 
-    // the fog: the slice of the sauna photo behind the pane, blurred, in the same ember print,
-    // with beads of condensation and a sheen so it reads as glass
+    // the fog: what the page paints for the view behind the glass, with beads of condensation and a
+    // sheen so it reads as glass
     fogTex = document.createElement('canvas'); fogTex.width = fog.width; fogTex.height = fog.height;
     const f = fogTex.getContext('2d')!;
-    const hr = hero.getBoundingClientRect(), pr = pane.getBoundingClientRect();
-    const s = Math.max(hr.width / sauna.naturalWidth, hr.height / sauna.naturalHeight);
-    const ox = (hr.width - sauna.naturalWidth * s) / 2 - (pr.left - hr.left);
-    const oy = (hr.height - sauna.naturalHeight * s) / 2 - (pr.top - hr.top);
-    f.fillStyle = '#b8461c'; f.fillRect(0, 0, fogTex.width, fogTex.height);
-    f.filter = `grayscale(1) contrast(1.35) brightness(.85) blur(${10 * DPR}px)`;
-    f.drawImage(sauna, ox * DPR, oy * DPR, sauna.naturalWidth * s * DPR, sauna.naturalHeight * s * DPR);
-    f.filter = 'none';
-    f.globalCompositeOperation = 'multiply'; f.fillStyle = '#ff6a2a'; f.fillRect(0, 0, fogTex.width, fogTex.height);
-    f.globalCompositeOperation = 'source-over'; f.fillStyle = 'rgba(255, 196, 160, .22)'; f.fillRect(0, 0, fogTex.width, fogTex.height);
+    paintFog(f, fogTex.width, fogTex.height, DPR);
     const sheen = f.createLinearGradient(0, 0, fogTex.width * .6, fogTex.height);
     sheen.addColorStop(0, 'rgba(255,236,220,.2)'); sheen.addColorStop(.4, 'rgba(255,236,220,0)');
     f.fillStyle = sheen; f.fillRect(0, 0, fogTex.width, fogTex.height);
@@ -129,12 +119,8 @@ export function mountHeroGlass({ hero, pane, fog, steam, sauna, onReading }: Opt
   }
 
   function drawFog(now: number, dt: number) {
-    let sum = 0;
     const px = maskImg.data;
-    for (let i = 0; i < peak.length; i++) {
-      const c = clearAt(i, now);
-      sum += c; px[i * 4 + 3] = c * 255;
-    }
+    for (let i = 0; i < peak.length; i++) px[i * 4 + 3] = clearAt(i, now) * 255;
     mctx.putImageData(maskImg, 0, 0);
     cx.globalCompositeOperation = 'source-over';
     cx.clearRect(0, 0, fog.width, fog.height);
@@ -180,7 +166,6 @@ export function mountHeroGlass({ hero, pane, fog, steam, sauna, onReading }: Opt
       cx.beginPath(); cx.ellipse(hx * DPR, (hy - d.w * .6) * DPR, d.w * .8 * DPR, d.w * 1.5 * DPR, 0, 0, 7); cx.fill();
       cx.filter = 'none';
     }
-    return peak.length ? sum / peak.length : 0;
   }
 
   // ---------- steam rising in the room, which the pointer stirs; none over the glass ----------
@@ -233,25 +218,14 @@ export function mountHeroGlass({ hero, pane, fog, steam, sauna, onReading }: Opt
       sx.drawImage(puff, p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
     }
     ptr.vx *= .8; ptr.vy *= .8;
-    // a soft warm light right at the pointer, like the lantern light in Saeng House
-    if (ptr.inside && !ptr.onPane) {
-      // small and faint: warmth at the fingertip, not a spotlight
-      const R = 90;
-      const g = sx.createRadialGradient(ptr.x, ptr.y, 0, ptr.x, ptr.y, R);
-      g.addColorStop(0, 'rgba(255,190,140,.12)'); g.addColorStop(1, 'rgba(255,190,140,0)');
-      sx.globalAlpha = 1; sx.fillStyle = g; sx.fillRect(ptr.x - R, ptr.y - R, R * 2, R * 2);
-    }
     sx.globalAlpha = 1;
   }
 
   // ---------- one loop for both ----------
-  let shown = 88, prev = performance.now(), raf = 0;
+  let prev = performance.now(), raf = 0;
   function frame(now: number) {
     const dt = Math.min(50, now - prev); prev = now;
-    const cleared = smooth(.03, .4, drawFog(now, dt));
-    // the reading: how much ice shows through the window takes it from the bench toward the bath
-    shown += (88 - 85 * cleared - shown) * (1 - Math.exp(-dt / 260));
-    onReading({ degrees: shown, cleared });
+    drawFog(now, dt);
     drawSteam(now, dt);
     raf = requestAnimationFrame(frame);
   }
@@ -262,9 +236,13 @@ export function mountHeroGlass({ hero, pane, fog, steam, sauna, onReading }: Opt
   pane.addEventListener('pointerup', onPaneUp);
   hero.addEventListener('pointermove', onHeroMove);
   hero.addEventListener('pointerleave', onHeroLeave);
-  addEventListener('resize', build);
-  // the picture element swaps the wide and tall crops at the phone breakpoint; rebuild the fog when it does
-  sauna.addEventListener('load', build);
+  // the pane can change size without the window doing so (the page placing it behind a picture's glass,
+  // a scrollbar coming and going), so the glass is rebuilt whenever the pane or the hero itself changes
+  let rebuild = 0;
+  const resized = new ResizeObserver(() => { cancelAnimationFrame(rebuild); rebuild = requestAnimationFrame(build); });
+  resized.observe(pane); resized.observe(hero);
+  // the fog is painted from the picture behind the glass; paint it again if that picture loads anew
+  photo.addEventListener('load', build);
   build();
   raf = requestAnimationFrame(frame);
   const demoTimer = window.setTimeout(() => { if (performance.now() - lastInput > 1500) demoWipe(); }, 1200);
@@ -278,7 +256,7 @@ export function mountHeroGlass({ hero, pane, fog, steam, sauna, onReading }: Opt
     pane.removeEventListener('pointerup', onPaneUp);
     hero.removeEventListener('pointermove', onHeroMove);
     hero.removeEventListener('pointerleave', onHeroLeave);
-    removeEventListener('resize', build);
-    sauna.removeEventListener('load', build);
+    resized.disconnect(); cancelAnimationFrame(rebuild);
+    photo.removeEventListener('load', build);
   };
 }

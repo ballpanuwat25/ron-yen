@@ -39,7 +39,7 @@ const TALL: Layout = {
   drips: [[286, 250, 44], [450, 250, 34], [183, 536, 56], [434, 536, 44]],
 };
 
-const photo = [hero.sauna.wide.src, hero.window.src];
+const photo = [hero.stones.src, hero.window.src];
 
 function Pane({ l }: { l: Layout }) {
   const id = (s: string) => `foot-${l.id}-${s}`;
