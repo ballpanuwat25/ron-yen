@@ -23,7 +23,7 @@ const smooth = (a: number, b: number, x: number) => {
 };
 
 type Drip = { pts: [number, number][]; v: number; w: number; slow: number; born: number; fade: number; seed: number };
-type Puff = { x: number; y: number; vx: number; vy: number; r: number; grow: number; life: number; max: number; seed: number; ambient: boolean };
+type Puff = { x: number; y: number; vx: number; vy: number; r: number; grow: number; life: number; max: number; seed: number };
 
 export function mountHeroGlass({ hero, pane, fog, steam, sauna, onReading }: Options): () => void {
   const cx = fog.getContext('2d')!;
@@ -183,7 +183,7 @@ export function mountHeroGlass({ hero, pane, fog, steam, sauna, onReading }: Opt
     return peak.length ? sum / peak.length : 0;
   }
 
-  // ---------- steam that trails the pointer around the sauna, and stays off the glass ----------
+  // ---------- steam rising in the room, which the pointer stirs; none over the glass ----------
   const puff = (() => {
     const c = document.createElement('canvas'); c.width = c.height = 128;
     const g = c.getContext('2d')!, r = g.createRadialGradient(64, 64, 0, 64, 64, 64);
@@ -203,41 +203,43 @@ export function mountHeroGlass({ hero, pane, fog, steam, sauna, onReading }: Opt
   const onHeroLeave = () => { ptr.inside = false; };
 
   function drawSteam(now: number, dt: number) {
-    if (!reduced) {
-      // a puff now and then while the pointer rests, more as it moves
-      const speed = Math.hypot(ptr.vx, ptr.vy);
-      if (ptr.inside && !ptr.onPane && now - ptr.at < 2500 && Math.random() < .12 + Math.min(.35, speed / 50)) {
-        puffs.push({ x: ptr.x + (Math.random() - .5) * 14, y: ptr.y + (Math.random() - .5) * 14,
-          vx: ptr.vx * .03 + (Math.random() - .5) * .4, vy: -(.35 + Math.random() * .45),
-          r: 26 + Math.random() * 30, grow: .7 + Math.random() * .6, life: 0, max: 1700 + Math.random() * 900, seed: Math.random() * 99, ambient: false });
-      }
-      // and always a little steam rising off the stones at the foot of the page
-      if (Math.random() < .07) {
-        puffs.push({ x: steam.width / DPR * Math.random(), y: steam.height / DPR + 30, vx: (Math.random() - .5) * .15, vy: -(.3 + Math.random() * .3),
-          r: 60 + Math.random() * 70, grow: .25 + Math.random() * .25, life: 0, max: 4200 + Math.random() * 2400, seed: Math.random() * 99, ambient: true });
-      }
+    // steam rises off the stones all the time; the pointer never makes it, it only stirs it
+    if (!reduced && Math.random() < .12) {
+      puffs.push({ x: steam.width / DPR * Math.random(), y: steam.height / DPR + 40, vx: (Math.random() - .5) * .15, vy: -(.6 + Math.random() * .4),
+        r: 60 + Math.random() * 80, grow: .22 + Math.random() * .22, life: 0, max: 6500 + Math.random() * 3000, seed: Math.random() * 99 });
     }
-    ptr.vx *= .8; ptr.vy *= .8;
+    const stir = ptr.inside && !ptr.onPane && now - ptr.at < 1500;
     sx.setTransform(DPR, 0, 0, DPR, 0, 0);
     sx.clearRect(0, 0, steam.width, steam.height);
     sx.globalCompositeOperation = 'screen';
     for (let i = puffs.length - 1; i >= 0; i--) {
       const p = puffs[i];
-      // over the glass the pointer's steam thins out fast: there the pointer is wiping instead
-      p.life += dt * (ptr.onPane && !p.ambient ? 3 : 1);
-      p.vx += Math.sin(now / 900 + p.seed) * .006;
-      p.vx *= .985; p.vy = p.vy * .99 - .004;
+      p.life += dt;
+      if (stir) {
+        // near the pointer the steam parts, and is dragged a little along the way the hand moves
+        const dx = p.x - ptr.x, dy = p.y - ptr.y, d = Math.hypot(dx, dy) + 1, reach = 190 + p.r * .6;
+        if (d < reach) {
+          const f = 1 - d / reach;
+          p.vx += (dx / d * .35 + ptr.vx * .05) * f;
+          p.vy += (dy / d * .35 + ptr.vy * .05) * f;
+        }
+      }
+      p.vx += Math.sin(now / 1100 + p.seed) * .004;
+      p.vx *= .985; p.vy += (-.85 - p.vy) * .02;   // eases back to a steady rise once stirred
       p.x += p.vx * dt * .06; p.y += p.vy * dt * .06; p.r += p.grow * dt * .06;
       const k = p.life / p.max;
       if (k >= 1) { puffs.splice(i, 1); continue; }
-      sx.globalAlpha = Math.sin(Math.min(1, k * 1.6) * Math.PI / 2) * (1 - k) * (p.ambient ? .22 : .38);
+      sx.globalAlpha = Math.sin(Math.min(1, k * 2) * Math.PI / 2) * (1 - k) * .28;
       sx.drawImage(puff, p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
     }
+    ptr.vx *= .8; ptr.vy *= .8;
     // a soft warm light right at the pointer, like the lantern light in Saeng House
     if (ptr.inside && !ptr.onPane) {
-      const g = sx.createRadialGradient(ptr.x, ptr.y, 0, ptr.x, ptr.y, 180);
-      g.addColorStop(0, 'rgba(255,190,140,.16)'); g.addColorStop(1, 'rgba(255,190,140,0)');
-      sx.globalAlpha = 1; sx.fillStyle = g; sx.fillRect(ptr.x - 180, ptr.y - 180, 360, 360);
+      // small and faint: warmth at the fingertip, not a spotlight
+      const R = 90;
+      const g = sx.createRadialGradient(ptr.x, ptr.y, 0, ptr.x, ptr.y, R);
+      g.addColorStop(0, 'rgba(255,190,140,.12)'); g.addColorStop(1, 'rgba(255,190,140,0)');
+      sx.globalAlpha = 1; sx.fillStyle = g; sx.fillRect(ptr.x - R, ptr.y - R, R * 2, R * 2);
     }
     sx.globalAlpha = 1;
   }
