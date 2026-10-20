@@ -12,10 +12,30 @@ export const studio = {
   address: ['Soi Phahonyothin 7, Ari', 'Phaya Thai, Bangkok 10400'],
   sauna: { temp: 88, seats: 10 },
   iceBath: { temp: 3, tubs: 2 },
-  deck: { temp: 31 },
-  sessionMinutes: 75,
+  deck: { temp: 31, seats: 12 },
+  showers: 2,
   opens: '06:30',
 } as const;
+
+// One way round, so nobody stands in a queue: the showers sit between the sauna and the tubs (you rinse
+// before the ice anyway), and the deck has more seats than the bench, so a full tub means a sit-down, not a wait.
+export const zones = [
+  { id: 'sauna', name: 'Sauna', note: '88°, ten on the bench' },
+  { id: 'showers', name: 'Showers', note: 'two, a rinse before the ice' },
+  { id: 'tubs', name: 'Ice baths', note: 'two tubs at 3°, one person each' },
+  { id: 'deck', name: 'Deck', note: 'twelve seats outside, hot tea' },
+  { id: 'lockers', name: 'Changing rooms', note: 'lockers and towels' },
+] as const;
+
+// A session is a time you book, not a routine: most people do 12 minutes in the sauna, 2 in the ice and
+// 10 on the deck, two to four times. Plunge only starts with each social session, while those guests are
+// still in the sauna, so the tubs are free; the two never share a tub.
+export type SessionKind = 'social' | 'plunge' | 'private';
+export const sessionKinds = {
+  social: { name: 'Social', minutes: 75, places: 10, uses: ['sauna', 'tubs', 'deck'] },
+  plunge: { name: 'Plunge only', minutes: 25, places: 2, uses: ['tubs', 'deck'] },
+  private: { name: 'Private', minutes: 75, places: 6, uses: ['sauna', 'tubs', 'deck'] },
+} as const satisfies Record<SessionKind, { name: string; minutes: number; places: number; uses: readonly string[] }>;
 
 export const nav = [
   { label: 'A round', href: '#round' },
@@ -57,4 +77,5 @@ export const packs = [
   { name: '10 sessions', note: '120 days', price: 6290 },
   { name: 'Monthly', note: 'one a day', price: 4900 },
   { name: 'Private', note: '20:00, up to six', price: 3900 },
+  { name: 'Plunge only', note: '25 minutes', price: 390 },
 ] as const;
