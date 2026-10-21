@@ -2,6 +2,6 @@
 // Each wall: its picture, its size, the window glass as four corners in its own pixels (clockwise
 // from the top left), and the box round them.
 export const heroWall = {
-  wide: { src: '/images/hero-wall-wide.webp', width: 1024, height: 572, hole: [[682.3, 131.5], [957.5, 82.5], [951.6, 412.8], [679.5, 360.9]], glass: [679, 82, 958, 413] },
-  tall: { src: '/images/hero-wall-tall.webp', width: 572, height: 1024, hole: [[326.7, 170.5], [574.0, 108.4], [574.0, 446.0], [329.0, 446.0]], glass: [326, 108, 574, 446] },
+  wide: { src: '/images/hero-wall-wide.webp', width: 2560, height: 1430, hole: [[1706.6, 331.1], [2391.8, 209.3], [2377.4, 1028.0], [1700.1, 898.4]], glass: [1700, 209, 2392, 1028] },
+  tall: { src: '/images/hero-wall-tall.webp', width: 1430, height: 2560, hole: [[821.5, 428.8], [1435.0, 273.1], [1435.0, 1113.9], [822.4, 1110.6]], glass: [821, 273, 1435, 1114] },
 } as const;

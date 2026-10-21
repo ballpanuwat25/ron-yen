@@ -10,9 +10,15 @@ const sans = Instrument_Sans({ subsets: ['latin'], weight: ['400', '500'], varia
 const thai = Noto_Serif_Thai({ subsets: ['thai', 'latin'], weight: ['300', '500'], variable: '--font-thai', display: 'swap' });
 const mark = Athiti({ subsets: ['thai'], weight: '600', variable: '--font-mark', display: 'swap' });
 
+// The share image (app/opengraph-image.jpg, twitter-image.jpg) is the first view itself, shot at 1200×630
+// just after the glass has wiped clear. On Vercel the links resolve against the deployment's own address.
+const title = 'Ron Yen · Sauna and ice bath, Ari, Bangkok';
+const description = 'A social sauna at 88° and four ice baths at 3°, on Soi Ari, Bangkok. Seventy-five minute sessions, ten on the bench, five minutes from BTS Ari.';
 export const metadata: Metadata = {
-  title: 'Ron Yen · Sauna and ice bath, Ari, Bangkok',
-  description: 'A social sauna at 88° and four ice baths at 3°, on Soi Ari, Bangkok. Seventy-five minute sessions, ten on the bench.',
+  title,
+  description,
+  openGraph: { title, description, type: 'website', siteName: 'Ron Yen', locale: 'en_GB' },
+  twitter: { card: 'summary_large_image', title, description },
 };
 
 export const viewport: Viewport = {
