@@ -17,7 +17,7 @@ const RAIL = 'M' + m.rail.split('M')[1];
 // The station sits on the line, as a transit map draws it: the point on the track nearest the foot of
 // its stairs, where the walk begins on the street below.
 const onLine = (p: Pt): Pt => {
-  const xy = RAIL.match(/[\d.]+/g)!.map(Number);
+  const xy = RAIL.match(/-?[\d.]+/g)!.map(Number);
   let best: Pt = p, bestD = Infinity;
   for (let i = 0; i + 3 < xy.length; i += 2) {
     const [ax, ay, bx, by] = xy.slice(i, i + 4), dx = bx - ax, dy = by - ay;
