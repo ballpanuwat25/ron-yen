@@ -47,8 +47,7 @@ export const sessionKinds = {
 
 export const nav = [
   { label: 'The studio', href: '#round' },
-  { label: 'Sessions', href: '#book' },
-  { label: 'Packs', href: '#packs' },
+  { label: 'Sessions & packs', href: '#book' },
   { label: 'Find us', href: '#find' },
 ] as const;
 
@@ -64,13 +63,50 @@ export const hero = {
   stones: { src: '/images/hero-hot-wide.webp', width: 2000, height: 1250, alt: '' },
 } as const;
 
+// The page shows the week's times and the prices; booking is a LINE message to reception. Picking a time
+// drops a locker tag with the message written from the day and the number of people, sent from a phone
+// or scanned from a computer. The same times every week, so there is nothing to keep up to date.
 export const book = {
-  heading: 'Book a session',
-  text: 'Pick a day and a time. A full session has a waitlist; plunge-only places start with each social session.',
+  heading: 'Sessions and packs',
+  text: 'The same times every week, ten on the bench at each. Pick one and we write the message to reception for you; send it on LINE and they reply with your place. Plunge-only places start with each social session.',
+  social: 'Social · 75 min',
+  plunge: 'Plunge only',
+  private: 'Private · up to six',
+  privateNote: 'The whole studio',
   packsHeading: 'Packs and prices',
-  packsNote: 'A pack covers a social session, or two plunges in its place. Cancel six hours ahead and it goes back on the pack.',
-  signedIn: 'Signed in as',
+  packsNote: 'A pack covers a social session, or two plunges in its place. Buy one at reception or on LINE; cancel six hours ahead and it goes back on the pack.',
+  lineLabel: 'LINE',
+  tag: {
+    day: 'Day',
+    people: 'People',
+    message: 'Your message to reception',
+    send: 'Send on LINE',
+    scan: 'Scan with your phone to send it on LINE.',
+    close: 'Not now',
+  },
+  demo: 'Demo: Ron Yen and its LINE account are made up, so LINE opens with the message to send to any chat of yours instead of to reception.',
 };
+
+export const timetable = {
+  weekdays: { label: 'Mon–Fri', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], times: ['06:30', '08:00', '09:30', '11:00', '12:30', '14:00', '15:30', '17:00', '18:30'] },
+  weekend: { label: 'Sat–Sun', days: ['Sat', 'Sun'], times: ['08:00', '09:30', '11:00', '12:30', '14:00', '15:30', '17:00', '18:30'] },
+  private: '20:00',
+} as const;
+export type Days = 'weekdays' | 'weekend';
+export type Booking = 'social' | 'plunge' | 'private';
+// how many one message can ask for: the bench, the plunge-only places, the private studio
+export const bookingMax: Record<Booking, number> = { social: 10, plunge: 2, private: 6 };
+
+// Reception's LINE official account. A link to it with a message opens the chat with the message typed.
+// `demo` keeps the made-up account from ever being opened: LINE opens with the message to share to a
+// chat of the visitor's own choosing instead.
+export const line = { id: '@ronyen', demo: true };
+export const lineMessage = (text: string) => line.demo
+  ? `https://line.me/R/share?text=${encodeURIComponent(text)}`
+  : `https://line.me/R/oaMessage/${encodeURIComponent(line.id)}/?${encodeURIComponent(text)}`;
+const bookingName: Record<Booking, string> = { social: 'the social session', plunge: 'plunge only', private: 'a private session' };
+export const bookingText = (what: Booking, day: string, time: string, people: number) =>
+  `Hi Ron Yen, I'd like to book ${bookingName[what]} on ${day} at ${time} for ${people} ${people === 1 ? 'person' : 'people'}.`;
 
 // A pack either holds points or covers one session a day for 30 days; the rest are single tickets.
 export type Pack = { name: string; price: number; note?: string; points?: number; days?: number; perDay?: number; kind?: SessionKind };

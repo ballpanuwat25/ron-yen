@@ -101,12 +101,6 @@ html:has(.loader:not(.is-open)) { overflow: hidden; }
 .hero-book { display: inline-flex; margin-top: 26px; padding: 14px 24px; border-radius: 999px; background: var(--ember); color: #1a0a05; font-weight: 600; font-size: 15px; }
 .hero-say { position: absolute; z-index: 4; right: var(--gutter); bottom: 28px; margin: 0; font-size: 12px; letter-spacing: .06em; color: rgba(247, 236, 226, .6); }
 
-/* the seats of a session, as drops: filled for a place taken */
-.seats { display: flex; gap: 2px; align-items: center; height: 14px; }
-.seats svg { width: 8px; height: 11px; }
-.seats path { fill: none; stroke: rgba(247, 236, 226, .6); stroke-width: 1.6; }
-.seats path.taken { fill: rgba(247, 236, 226, .85); }
-
 @media (max-width: 860px) {
   .hero-top nav { display: none; }
   .hero-wall .hero-wall-wide { display: none; }
@@ -256,13 +250,13 @@ html:has(.loader:not(.is-open)) { overflow: hidden; }
   .book-grid { grid-template-columns: 1fr; }
 }
 /* under the list, the packs use the width in two columns rather than stretching the dotted leaders:
-   the prices on the left, the note and the guest's own pack on the right */
+   the prices on the left, the note and the LINE account on the right */
 @media (min-width: 640px) and (max-width: 1024px) {
   .book-packs { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); column-gap: 56px; align-items: start; }
   .book-packs h3 { grid-column: 1 / -1; }
   .book-packs dl { grid-column: 1; grid-row: 2 / span 2; }
   .book-packs > p { grid-column: 2; grid-row: 2; margin-top: 0; }
-  .book-packs .member { grid-column: 2; grid-row: 3; }
+  .book-packs .book-line { grid-column: 2; grid-row: 3; }
 }
 
 .book-days { display: flex; gap: 4px; margin-bottom: 18px; overflow-x: auto; scrollbar-width: none; }
@@ -272,24 +266,23 @@ html:has(.loader:not(.is-open)) { overflow: hidden; }
 
 .book-list { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); }
 .book-list > li { border-bottom: 1px solid var(--line); }
-.book-list .row { display: grid; grid-template-columns: 64px 160px auto 1fr auto; align-items: center; gap: 18px; padding: 12px 0; }
+.book-list .row { display: grid; grid-template-columns: 64px 160px 1fr auto; align-items: center; gap: 18px; padding: 12px 0; }
 .book-list time { font: 300 22px/1 var(--serif); font-variant-numeric: tabular-nums; }
 .book-list .what { font-size: 14px; color: var(--cream-soft); }
 .book-list .left { font-size: 13px; color: var(--cream-soft); }
 .book-list .acts { display: flex; gap: 14px; justify-content: flex-end; align-items: center; }
-/* the actions are small tags, each with the locker tag's hole: cream to book, ice for a plunge */
-.book-list .acts button, .book-list .acts em { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 7px;
-  height: 30px; padding: 0 13px 0 10px; border-radius: 999px; font-size: 13px; font-weight: 500; white-space: nowrap; }
-.book-list .acts button::before, .book-list .acts em::before { content: ""; width: 6px; height: 6px; border-radius: 50%; }
-.book-list .acts button { cursor: pointer; background: var(--cream); color: #2a1008; transition: background .2s, transform .2s; }
-.book-list .acts button::before { background: var(--night); }
+/* the actions are small tags with the locker tag's hole: cream to book, ice for a plunge */
+.book-list .acts button { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+  height: 30px; padding: 0 13px 0 10px; border-radius: 999px; font-size: 13px; font-weight: 500; white-space: nowrap;
+  background: var(--cream); color: #2a1008; transition: background .2s, transform .2s; }
+.book-list .acts button::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--night); }
 .book-list .acts button:hover { background: #fff; transform: translateY(-1px); }
 .book-list .acts button.quiet { background: transparent; color: var(--ice); box-shadow: inset 0 0 0 1px rgba(191, 224, 242, .5); }
 .book-list .acts button.quiet::before { box-shadow: inset 0 0 0 1.5px currentColor; background: transparent; }
 .book-list .acts button.quiet:hover { background: rgba(191, 224, 242, .1); }
+.book-list .acts button[aria-expanded="true"] { box-shadow: 0 0 0 2px var(--night), 0 0 0 3px currentColor; }
 .book-list .acts button:focus-visible { outline: 2px solid var(--ice); outline-offset: 3px; }
-.book-list .acts em { color: var(--ember); box-shadow: inset 0 0 0 1px rgba(255, 90, 31, .55); }
-.book-list .acts em::before { background: var(--ember); }
+.book-demo { margin: 14px 0 0; font-size: 12px; color: var(--cream-soft); opacity: .8; }
 
 /* the locker tag drops in below its row while the row makes room, and lifts away as it folds shut */
 .tag-slide { display: grid; grid-template-rows: 1fr; animation: tag-room .42s cubic-bezier(.2, .7, .2, 1) both; }
@@ -298,61 +291,74 @@ html:has(.loader:not(.is-open)) { overflow: hidden; }
 .tag-slide .tag { animation: tag-drop .5s cubic-bezier(.2, .8, .25, 1) both; transform-origin: 26px 26px; }
 .tag-slide.is-closing { animation: tag-fold .32s cubic-bezier(.4, 0, .6, 1) both; }
 .tag-slide.is-closing .tag { animation: tag-lift .26s ease-in both; }
-.tag-swap { animation: tag-swap .35s ease-out both; }
 @keyframes tag-room { from { grid-template-rows: 0fr; } }
 @keyframes tag-fold { to { grid-template-rows: 0fr; } }
 @keyframes tag-drop { from { opacity: 0; transform: translateY(-18px) rotate(-1.5deg); } }
 @keyframes tag-lift { to { opacity: 0; transform: translateY(-12px); } }
-@keyframes tag-swap { from { opacity: 0; transform: translateY(6px); } }
 @media (prefers-reduced-motion: reduce) {
   /* still ends, so the tag still closes, but in an instant */
-  .tag-slide, .tag-slide .tag, .tag-slide.is-closing, .tag-slide.is-closing .tag, .tag-swap { animation-duration: 1ms; }
+  .tag-slide, .tag-slide .tag, .tag-slide.is-closing, .tag-slide.is-closing .tag { animation-duration: 1ms; }
 }
 
-/* the locker tag: the band a sauna gives you to wear, with a hole for the strap and your number on it */
-.tag { position: relative; display: flex; margin: 4px 0 18px 64px; max-width: 560px; background: var(--cream); color: #2a1008;
+/* the locker tag: the band a sauna gives you to wear, with a hole for the strap */
+.tag { position: relative; display: flex; margin: 4px 0 18px 64px; max-width: 620px; background: var(--cream); color: #2a1008;
   border-radius: 14px; box-shadow: 0 18px 40px rgba(0, 0, 0, .35); }
-.tag::before { content: ""; width: 10px; border-radius: 14px 0 0 14px; background: var(--ember); }
+.tag::before { content: ""; flex: none; width: 10px; border-radius: 14px 0 0 14px; background: var(--ember); }
 .tag-cold::before { background: var(--ice-ink); }
 .tag .hole { position: absolute; left: 22px; top: 22px; width: 14px; height: 14px; border-radius: 50%; background: var(--night); box-shadow: inset 0 0 0 2px rgba(42, 16, 8, .2); }
-.tag-body { flex: 1; padding: 18px 22px 18px 44px; }
+.tag-body { flex: 1; min-width: 0; padding: 18px 22px 18px 44px; }
 .tag-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; align-items: baseline; padding-bottom: 12px; border-bottom: 1px dashed rgba(42, 16, 8, .3); }
 .tag-kind { font: 300 22px/1.1 var(--serif); }
 .tag-when { font-size: 13px; color: rgba(42, 16, 8, .7); }
-.tag-say { margin: 14px 0 0; font-size: 14px; line-height: 1.55; }
-.tag-pay { border: 0; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
-.tag-pay legend { font-size: 12px; color: rgba(42, 16, 8, .6); margin-bottom: 6px; }
-.tag-pay label { display: grid; grid-template-columns: 20px 1fr; gap: 0 8px; cursor: pointer; font-size: 14px; }
-.tag-pay label small { grid-column: 2; font-size: 12px; color: rgba(42, 16, 8, .6); }
-.tag-pay label.is-off { opacity: .45; cursor: default; }
-.tag-pay input { accent-color: var(--ember); margin: 3px 0 0; }
+
+/* the day and how many: small stamped chips and a counter, in the tag's own ink */
+.tag-pick { display: flex; flex-wrap: wrap; gap: 14px 28px; margin-top: 14px; }
+.tag-field { display: grid; gap: 6px; }
+.tag-field > span { font-size: 12px; color: rgba(42, 16, 8, .6); }
+.tag-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-chips button, .tag-count button { all: unset; box-sizing: border-box; cursor: pointer; font-size: 13px; }
+.tag-chips button { padding: 5px 11px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(42, 16, 8, .3); }
+.tag-chips button:hover { box-shadow: inset 0 0 0 1px #2a1008; }
+.tag-chips button[aria-checked="true"] { background: #2a1008; color: var(--cream); box-shadow: none; }
+.tag-count { display: flex; align-items: center; gap: 4px; }
+.tag-count button { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(42, 16, 8, .3); font-size: 16px; }
+.tag-count button:disabled { opacity: .35; cursor: default; }
+.tag-count output { min-width: 28px; text-align: center; font: 300 22px/1 var(--serif); }
+.tag-chips button:focus-visible, .tag-count button:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+
+/* the message as it will arrive, beside its code for a phone to scan */
+.tag-send { display: flex; gap: 18px; align-items: center; margin-top: 16px; }
+.tag-message { flex: 1; min-width: 0; display: grid; gap: 6px; }
+.tag-message > span { font-size: 12px; color: rgba(42, 16, 8, .6); }
+.tag-message p { margin: 0; padding: 10px 14px; border-radius: 4px 14px 14px 14px; background: rgba(42, 16, 8, .07); font-size: 14px; line-height: 1.5; }
+.tag-qr { margin: 0; flex: none; width: 112px; display: grid; gap: 6px; }
+.tag-qr svg { width: 112px; height: 112px; display: block; }
+.tag-qr .qr-ground { fill: #fff; }
+.tag-qr .qr-ink { fill: #2a1008; }
+.tag-qr figcaption { font-size: 11px; line-height: 1.35; color: rgba(42, 16, 8, .6); }
+
 .tag-acts { display: flex; gap: 18px; align-items: center; margin-top: 16px; }
-.tag-acts button { all: unset; cursor: pointer; font-size: 14px; }
+.tag-acts button, .tag-acts a { all: unset; cursor: pointer; font-size: 14px; }
 .tag-acts .go { background: #2a1008; color: var(--cream); padding: 9px 18px; border-radius: 999px; }
 .tag-acts .quiet { border-bottom: 1px solid currentColor; }
-.tag-acts button:focus-visible { outline: 2px solid var(--ember); outline-offset: 3px; }
-.tag-demo { margin: 12px 0 0; font-size: 12px; color: rgba(42, 16, 8, .55); }
-.tag-done { display: grid; grid-template-columns: 112px 1fr; gap: 18px; margin-top: 14px; align-items: center; }
-.tag-done .qr { width: 112px; height: 112px; display: block; }
-.tag-done .qr-ground { fill: #fff; }
-.tag-done .qr-ink { fill: #2a1008; }
-.tag-done > div { display: grid; gap: 4px; font-size: 13px; color: rgba(42, 16, 8, .75); }
-.tag-done .locker { font: 300 30px/1 var(--serif); color: #2a1008; }
-.tag-done .code { font: 500 13px/1 var(--sans); letter-spacing: .06em; color: #2a1008; }
-/* a narrow list: the time, then what and how full on one side, what is left and the tags on the other */
+.tag-acts button:focus-visible, .tag-acts a:focus-visible { outline: 2px solid var(--ember); outline-offset: 3px; }
+/* a narrow list: the time, then what it is over its note, and the tags on the right */
 @container book-list (max-width: 700px) {
-  .book-list .row { grid-template-columns: 54px 1fr auto; row-gap: 6px; }
-  .book-list .what { grid-column: 2; }
-  .book-list .row > .seats { grid-column: 2; grid-row: 2; }
-  .book-list .left { grid-column: 3; grid-row: 1; text-align: right; }
-  .book-list .acts { grid-column: 3; grid-row: 2; gap: 8px; }
+  .book-list .row { grid-template-columns: 54px 1fr auto; row-gap: 4px; }
+  .book-list .what { grid-column: 2; grid-row: 1; }
+  .book-list .left { grid-column: 2; grid-row: 2; }
+  .book-list time { grid-row: 1 / span 2; }
+  .book-list .acts { grid-column: 3; grid-row: 1 / span 2; gap: 8px; }
+  /* a row with no note keeps what it is level with its time */
+  .book-list .left:empty { display: none; }
+  .book-list .what:has(+ .left:empty) { grid-row: 1 / span 2; }
   .tag { margin-left: 0; }
 }
 /* and on a phone the tags stack */
 @container book-list (max-width: 460px) {
   .book-list .acts { flex-direction: column; align-items: flex-end; gap: 6px; }
-  .tag-done { grid-template-columns: 96px 1fr; }
-  .tag-done .qr { width: 96px; height: 96px; }
+  .tag-body { padding: 16px 16px 16px 40px; }
+  .tag-send { flex-direction: column; align-items: stretch; }
 }
 
 .book-packs h3 { margin: 0 0 16px; font: 300 24px/1.2 var(--serif); }
@@ -363,8 +369,9 @@ html:has(.loader:not(.is-open)) { overflow: hidden; }
 .book-packs dt small { color: var(--cream-soft); font-size: 12px; }
 .book-packs dd { margin: 0; font: 300 20px/1 var(--serif); font-variant-numeric: tabular-nums; }
 .book-packs > p { margin: 20px 0 0; font-size: 13px; color: var(--cream-soft); }
-.book-packs .member { display: grid; gap: 4px; margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 13px; color: var(--cream-soft); }
-.book-packs .member b { color: var(--cream); font-weight: 500; }
+.book-line { margin-bottom: 0; display: flex; align-items: baseline; gap: 10px; margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 13px; color: var(--cream-soft); }
+.book-line b { font: 300 22px/1 var(--serif); color: var(--cream); }
+.book-line:hover b { color: #fff; }
 
 /* ---------------- find us ---------------- */
 .find { display: grid; grid-template-columns: 1fr 1.25fr; gap: clamp(32px, 5vw, 80px); align-items: center;

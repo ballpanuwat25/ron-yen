@@ -1,63 +1,53 @@
 'use client';
 
 import qrcode from 'qrcode-generator';
-import { useMemo, useState, type ReactNode } from 'react';
-import { book, packs, sessionKinds } from '@/content/site';
-import { demoMember, week, type Session } from '@/content/demo';
-import Seats from './Seats';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { book, bookingMax, bookingText, line, lineMessage, packs, timetable, type Booking, type Days } from '@/content/site';
+import { bangkokNow, nextDates } from '@/lib/bangkok';
 
-// The week's sessions, and a booking made on a locker tag: the band a sauna gives you to wear, with your
-// number on it. Packs pay in points (two for a session, one for a plunge). Everything here is a demo:
-// the bookings are made up and nothing is sent or charged.
-
-type Choice = 'social' | 'plunge' | 'private' | 'waitlist';
-type Open = { day: number; time: string; choice: Choice };
-type Booked = { code: string; locker: number; choice: Choice; day: number; time: string; paidWith: 'points' | 'promptpay'; place?: number };
+// The week's times and the prices, to read. Picking a time drops a locker tag below its row with the
+// message to reception written from the day and the number of people: a phone sends it on LINE, a
+// computer shows it as a QR code to scan. Nothing is booked here; reception confirms the place by hand.
 
 const baht = (n: number) => `฿${n.toLocaleString('en-US')}`;
-// a pack's balance as guests see it: in sessions, never in points
-const inSessions = (p: number) => `${Math.floor(p / 2)} social${Math.floor(p / 2) === 1 ? '' : 's'} or ${p} plunge${p === 1 ? '' : 's'}`;
-const price = { social: 790, plunge: 390, private: 3900 } as const;
+type Open = { time: string; what: Booking };
 
 export default function Book() {
-  const [day, setDay] = useState(0);
+  const [days, setDays] = useState<Days>('weekdays');
   const [open, setOpen] = useState<Open | null>(null);
   // the tag lifts away before it goes, so closing is a moment of its own
   const [closing, setClosing] = useState(false);
-  const [points, setPoints] = useState(demoMember.points);
-  const [pay, setPay] = useState<'points' | 'promptpay'>('points');
-  const [booked, setBooked] = useState<Booked | null>(null);
-  // places this visitor has taken in the demo, so the seats on the list fill as they book
-  const [mine, setMine] = useState<Record<string, Choice>>({});
+  // opens on today's timetable once the page knows what day it is in Bangkok
+  useEffect(() => setDays(bangkokNow().days), []);
+  const t = timetable[days];
 
-  const sessions = week[day].sessions;
-  const taken = (s: Session) => s.taken + (mine[`${day}-${s.time}`] === 'social' ? 1 : 0);
-  const plungeLeft = (s: Session) => 2 - s.plungeTaken - (mine[`${day}-${s.time}`] === 'plunge' ? 1 : 0);
-
-  const start = (time: string, choice: Choice) => {
-    setOpen({ day, time, choice });
+  const pick = (time: string, what: Booking) => {
+    if (open?.time === time && open.what === what && !closing) { setClosing(true); return; }
+    setOpen({ time, what });
     setClosing(false);
-    setBooked(null);
-    setPay(choice === 'private' || choice === 'waitlist' ? 'promptpay' : points >= cost(choice) ? 'points' : 'promptpay');
   };
-  const cost = (c: Choice) => (c === 'social' ? sessionKinds.social.points : c === 'plunge' ? sessionKinds.plunge.points : 0);
-
-  const confirm = () => {
-    if (!open) return;
-    const s = week[open.day].sessions.find((x) => x.time === open.time)!;
-    const code = `RY-${week[open.day].key.slice(5).replace('-', '')}-${open.time.replace(':', '')}-${String(10 + Object.keys(mine).length).padStart(2, '0')}`;
-    if (pay === 'points') setPoints((p) => p - cost(open.choice));
-    setMine((m) => ({ ...m, [`${open.day}-${open.time}`]: open.choice }));
-    setBooked({ code, locker: 3 + ((s.taken * 7 + Number(open.time.slice(0, 2))) % 20), choice: open.choice, day: open.day, time: open.time, paidWith: pay, place: open.choice === 'waitlist' ? s.waiting + 1 : undefined });
+  const row = (time: string, what: string, note: string, acts: ReactNode, kind: Booking[]) => {
+    const here = open && open.time === time && kind.includes(open.what) ? open : null;
+    return (
+      <li key={time} className={here ? 'is-open' : undefined}>
+        <div className="row">
+          <time>{time}</time>
+          <span className="what">{what}</span>
+          <span className="left">{note}</span>
+          <span className="acts">{acts}</span>
+        </div>
+        {here && (
+          <Slide key={`${days}-${here.time}-${here.what}`} closing={closing} onClosed={() => { setOpen(null); setClosing(false); }}>
+            <Tag open={here} days={days} onClose={() => setClosing(true)} />
+          </Slide>
+        )}
+      </li>
+    );
   };
-  const cancel = () => {
-    if (!booked) return;
-    if (booked.paidWith === 'points') setPoints((p) => p + cost(booked.choice));
-    setMine((m) => { const n = { ...m }; delete n[`${booked.day}-${booked.time}`]; return n; });
-    setClosing(true);
-  };
-  const close = () => setClosing(true);
-  const closed = () => { setOpen(null); setClosing(false); };
+  const button = (time: string, what: Booking, label: string, quiet?: boolean) => (
+    <button type="button" className={quiet ? 'quiet' : undefined} aria-expanded={open?.time === time && open.what === what}
+      onClick={() => pick(time, what)}>{label}</button>
+  );
 
   return (
     <section className="book" id="book">
@@ -68,51 +58,19 @@ export default function Book() {
 
       <div className="book-grid">
         <div>
-          <div className="book-days" role="tablist" aria-label="Day">
-            {week.map((d, i) => (
-              <button key={d.key} type="button" role="tab" aria-selected={i === day} onClick={() => { setDay(i); setOpen(null); }}>
-                {d.short}
+          <div className="book-days" role="tablist" aria-label="Days">
+            {(['weekdays', 'weekend'] as const).map((d) => (
+              <button key={d} type="button" role="tab" aria-selected={d === days} onClick={() => { setDays(d); setOpen(null); }}>
+                {timetable[d].label}
               </button>
             ))}
           </div>
 
           <ul className="book-list">
-            {sessions.map((s) => {
-              const key = `${day}-${s.time}`, isOpen = open?.day === day && open.time === s.time;
-              const full = s.kind === 'social' && taken(s) >= 10;
-              const privateTaken = s.kind === 'private' && s.taken >= 10;
-              return (
-                <li key={s.time} className={isOpen ? 'is-open' : undefined}>
-                  <div className="row">
-                    <time>{s.time}</time>
-                    <span className="what">{s.kind === 'private' ? 'Private · up to six' : 'Social · 75 min'}</span>
-                    {s.kind === 'social' ? <Seats taken={taken(s)} /> : <span className="seats" />}
-                    <span className="left">
-                      {s.kind === 'private' ? (privateTaken ? 'Booked' : 'Whole studio')
-                        : full ? `Full · ${s.waiting} waiting` : `${10 - taken(s)} of 10 left`}
-                    </span>
-                    <span className="acts">
-                      {mine[key] ? <em>{mine[key] === 'waitlist' ? 'On the waitlist' : 'Booked'}</em>
-                        : s.kind === 'private' ? (!privateTaken && <button type="button" onClick={() => start(s.time, 'private')}>Book</button>)
-                        : full ? <button type="button" onClick={() => start(s.time, 'waitlist')}>Join waitlist</button>
-                        : <button type="button" onClick={() => start(s.time, 'social')}>Book</button>}
-                      {s.kind === 'social' && !mine[key] && plungeLeft(s) > 0 && (
-                        <button type="button" className="quiet" onClick={() => start(s.time, 'plunge')}>Plunge only · {plungeLeft(s)}</button>
-                      )}
-                    </span>
-                  </div>
-                  {isOpen && (
-                    <Slide closing={closing} onClosed={closed}>
-                      <Tag
-                        open={open} booked={booked} points={points} pay={pay} setPay={setPay}
-                        session={s} dayLabel={week[day].label} onConfirm={confirm} onCancel={cancel} onClose={close} cost={cost(open.choice)}
-                      />
-                    </Slide>
-                  )}
-                </li>
-              );
-            })}
+            {t.times.map((time) => row(time, book.social, '', <>{button(time, 'social', 'Book')}{button(time, 'plunge', book.plunge, true)}</>, ['social', 'plunge']))}
+            {row(timetable.private, book.private, book.privateNote, button(timetable.private, 'private', 'Book'), ['private'])}
           </ul>
+          {line.demo && <p className="book-demo">{book.demo}</p>}
         </div>
 
         <aside className="book-packs" id="packs">
@@ -126,10 +84,7 @@ export default function Book() {
             ))}
           </dl>
           <p>{book.packsNote}</p>
-          <div className="member">
-            <span>{book.signedIn} <b>{demoMember.name}</b></span>
-            <span>{demoMember.pack} pack: {inSessions(points)} left, until {demoMember.expires}</span>
-          </div>
+          <p className="book-line"><span>{book.lineLabel}</span><b>{line.id}</b></p>
         </aside>
       </div>
     </section>
@@ -150,83 +105,75 @@ function Slide({ closing, onClosed, children }: { closing: boolean; onClosed: ()
   );
 }
 
-// The locker tag: what you are booking, how you pay, and once it is booked, your code and locker number
-function Tag({ open, booked, points, pay, setPay, session, dayLabel, onConfirm, onCancel, onClose, cost }: {
-  open: Open; booked: Booked | null; points: number; pay: 'points' | 'promptpay'; setPay: (p: 'points' | 'promptpay') => void;
-  session: Session; dayLabel: string; onConfirm: () => void; onCancel: () => void; onClose: () => void; cost: number;
-}) {
-  const c = open.choice;
-  const title = c === 'social' ? 'Social session' : c === 'plunge' ? 'Plunge only' : c === 'private' ? 'Private session' : 'Waitlist';
-  const minutes = c === 'plunge' ? sessionKinds.plunge.minutes : sessionKinds.social.minutes;
-  const amount = c === 'social' ? price.social : c === 'plunge' ? price.plunge : c === 'private' ? price.private : 0;
+// The locker tag: the day, how many, and the message they make, ready to send
+function Tag({ open, days, onClose }: { open: Open; days: Days; onClose: () => void }) {
+  const dates = useMemo(() => nextDates(timetable[days].days, open.time), [days, open.time]);
+  const [day, setDay] = useState(0);
+  const [people, setPeople] = useState(1);
+  const [phone, setPhone] = useState(false);
+  useEffect(() => setPhone(matchMedia('(pointer: coarse)').matches), []);
+
+  const max = bookingMax[open.what];
+  const text = bookingText(open.what, dates[day].long, open.time, people);
+  const link = lineMessage(text);
+  // the code holds the same link as the button, so a phone that scans it opens LINE with the message
   const qr = useMemo(() => {
-    if (!booked) return null;
-    const q = qrcode(0, 'M'); q.addData(booked.code); q.make();
+    const q = qrcode(0, 'L'); q.addData(link, 'Byte'); q.make();
     const n = q.getModuleCount(), cells: string[] = [];
     for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) cells.push(`M${k} ${r}h1v1h-1z`);
     return { n, d: cells.join('') };
-  }, [booked]);
+  }, [link]);
+  const title = open.what === 'social' ? 'Social session' : open.what === 'plunge' ? 'Plunge only' : 'Private session';
+  const minutes = open.what === 'plunge' ? 25 : 75;
 
   return (
-    <div className={`tag tag-${c === 'plunge' ? 'cold' : 'hot'}`} role="group" aria-label={`${title}, ${dayLabel}, ${open.time}`}>
+    <div className={`tag tag-${open.what === 'plunge' ? 'cold' : 'hot'}`} role="group" aria-label={`${title}, ${open.time}`}>
       <span className="hole" aria-hidden="true" />
       <div className="tag-body">
         <div className="tag-top">
           <span className="tag-kind">{title}</span>
-          <span className="tag-when">{dayLabel} · {open.time}{c !== 'waitlist' && ` · ${minutes} min`}</span>
+          <span className="tag-when">{timetable[days].label} · {open.time} · {minutes} min</span>
         </div>
 
-        {!booked ? (
-          <div className="tag-swap" key="ask">
-            {c === 'waitlist' ? (
-              <p className="tag-say">{session.time} is full. Join the waitlist and you are number {session.waiting + 1}; if a place opens we email you and hold it for 30 minutes. Nothing to pay until then.</p>
-            ) : c === 'private' ? (
-              <p className="tag-say">The whole studio for up to six, from {open.time}. {baht(amount)}, paid ahead by PromptPay; packs do not cover private sessions.</p>
-            ) : (
-              <fieldset className="tag-pay">
-                <legend>Pay with</legend>
-                <label className={points < cost ? 'is-off' : undefined}>
-                  <input type="radio" name="pay" checked={pay === 'points'} disabled={points < cost} onChange={() => setPay('points')} />
-                  <span>Your pack</span>
-                  <small>{points < cost ? 'not enough left on it' : `${inSessions(points)} left; ${inSessions(points - cost)} after`}</small>
-                </label>
-                <label>
-                  <input type="radio" name="pay" checked={pay === 'promptpay'} onChange={() => setPay('promptpay')} />
-                  <span>{baht(amount)} by PromptPay</span>
-                  <small>scan and pay on the next step</small>
-                </label>
-              </fieldset>
-            )}
-            <div className="tag-acts">
-              <button type="button" className="go" onClick={onConfirm}>{c === 'waitlist' ? 'Join the waitlist' : 'Confirm'}</button>
-              <button type="button" className="quiet" onClick={onClose}>Not now</button>
-            </div>
-            <p className="tag-demo">Demo: nothing is booked or charged.</p>
-          </div>
-        ) : (
-          <div className="tag-swap" key="done">
-            {booked.choice === 'waitlist' ? (
-              <p className="tag-say">You are number {booked.place} on the waitlist for {booked.time}. If a place opens we email you and hold it for 30 minutes.</p>
-            ) : (
-              <div className="tag-done">
-                <svg className="qr" viewBox={`-2 -2 ${qr!.n + 4} ${qr!.n + 4}`} role="img" aria-label={`QR code for booking ${booked.code}`}>
-                  <rect x="-2" y="-2" width={qr!.n + 4} height={qr!.n + 4} className="qr-ground" />
-                  <path d={qr!.d} className="qr-ink" />
-                </svg>
-                <div>
-                  <b className="locker">Locker {booked.locker}</b>
-                  <span className="code">{booked.code}</span>
-                  <span>{booked.paidWith === 'points' ? 'Paid from your pack' : `${baht(amount)} by PromptPay`}</span>
-                  <span>Show this at reception. Cancel up to six hours before{booked.paidWith === 'points' ? ' and it goes back on your pack' : ' for a full refund'}.</span>
-                </div>
-              </div>
-            )}
-            <div className="tag-acts">
-              <button type="button" className="quiet" onClick={onCancel}>{booked.choice === 'waitlist' ? 'Leave the waitlist' : 'Cancel booking'}</button>
-              <button type="button" className="quiet" onClick={onClose}>Done</button>
+        <div className="tag-pick">
+          <div className="tag-field" role="radiogroup" aria-label={book.tag.day}>
+            <span>{book.tag.day}</span>
+            <div className="tag-chips">
+              {dates.map((d, i) => (
+                <button key={d.long} type="button" role="radio" aria-checked={i === day} onClick={() => setDay(i)}>{d.label}</button>
+              ))}
             </div>
           </div>
-        )}
+          <div className="tag-field">
+            <span>{book.tag.people}</span>
+            <div className="tag-count">
+              <button type="button" aria-label="One fewer" disabled={people <= 1} onClick={() => setPeople((p) => p - 1)}>−</button>
+              <output aria-live="polite">{people}</output>
+              <button type="button" aria-label="One more" disabled={people >= max} onClick={() => setPeople((p) => p + 1)}>+</button>
+            </div>
+          </div>
+        </div>
+
+        <div className="tag-send">
+          <div className="tag-message">
+            <span>{book.tag.message}</span>
+            <p>{text}</p>
+          </div>
+          {!phone && (
+            <figure className="tag-qr">
+              <svg viewBox={`-2 -2 ${qr.n + 4} ${qr.n + 4}`} role="img" aria-label="QR code with the message">
+                <rect x="-2" y="-2" width={qr.n + 4} height={qr.n + 4} className="qr-ground" />
+                <path d={qr.d} className="qr-ink" />
+              </svg>
+              <figcaption>{book.tag.scan}</figcaption>
+            </figure>
+          )}
+        </div>
+
+        <div className="tag-acts">
+          {phone && <a className="go" href={link}>{book.tag.send}</a>}
+          <button type="button" className="quiet" onClick={onClose}>{book.tag.close}</button>
+        </div>
       </div>
     </div>
   );
