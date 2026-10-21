@@ -198,8 +198,11 @@ export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSe
         r: 60 + Math.random() * 80, grow: .22 + Math.random() * .22, life: 0, max: 6500 + Math.random() * 3000, seed: Math.random() * 99 });
     }
     const stir = ptr.inside && !ptr.onPane && now - ptr.at < 1500;
-    sx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    // cleared in the canvas's own pixels: at a pixel ratio under one (a page zoomed out) the drawing
+    // transform would leave a band uncleared, where the steam piles up white
+    sx.setTransform(1, 0, 0, 1, 0, 0);
     sx.clearRect(0, 0, steam.width, steam.height);
+    sx.setTransform(DPR, 0, 0, DPR, 0, 0);
     sx.globalCompositeOperation = 'screen';
     for (let i = puffs.length - 1; i >= 0; i--) {
       const p = puffs[i];
