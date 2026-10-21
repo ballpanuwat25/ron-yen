@@ -7,13 +7,30 @@ import { findUs } from '@/content/site';
 
 type Pt = readonly [number, number];
 const m = ariMap;
-const start = m.walk.route.match(/^M([\d.]+) ([\d.]+)/)!.slice(1).map(Number) as unknown as Pt;
-const points: Pt[] = [start, ...m.walk.legs.map((l) => l.to)];
+const foot = m.walk.route.match(/^M([\d.]+) ([\d.]+)/)!.slice(1).map(Number) as unknown as Pt;
 const angle = (a: Pt, b: Pt) => Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI;
 // where each numbered step sits beside its point, in screen pixels, clear of the platform and the drop
 const STEP_AT: Pt[] = [[-24, 0], [16, 4], [24, 24]];
 // the map data holds the BTS as its two tracks, which pull apart at this scale; one is drawn, as one line
 const RAIL = 'M' + m.rail.split('M')[1];
+
+// The station sits on the line, as a transit map draws it: the point on the track nearest the foot of
+// its stairs, where the walk begins on the street below.
+const onLine = (p: Pt): Pt => {
+  const xy = RAIL.match(/[\d.]+/g)!.map(Number);
+  let best: Pt = p, bestD = Infinity;
+  for (let i = 0; i + 3 < xy.length; i += 2) {
+    const [ax, ay, bx, by] = xy.slice(i, i + 4), dx = bx - ax, dy = by - ay;
+    const t = Math.max(0, Math.min(1, ((p[0] - ax) * dx + (p[1] - ay) * dy) / (dx * dx + dy * dy || 1)));
+    const q: Pt = [ax + dx * t, ay + dy * t], d = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    if (d < bestD) { best = q; bestD = d; }
+  }
+  return best;
+};
+const start = onLine(foot);
+const points: Pt[] = [start, ...m.walk.legs.map((l) => l.to)];
+// the walk from the platform down to the street, then along the route
+const WALK = `M${start[0].toFixed(1)} ${start[1].toFixed(1)}L${m.walk.route.slice(1)}`;
 
 // k is how many screen pixels one map unit draws at, so text and markers keep their size in either crop
 function Map({ viewBox, k, className }: { viewBox: string; k: number; className: string }) {
@@ -29,7 +46,7 @@ function Map({ viewBox, k, className }: { viewBox: string; k: number; className:
       <text className="r-name" fontSize={11 / k} transform={`translate(${T[0] - 10} ${T[1] - 22}) rotate(${angle(S, T)})`}>Phahonyothin Rd · BTS overhead</text>
       <text className="r-name" fontSize={11 / k} transform={`translate(${P[0] - 70} ${P[1] - 62}) rotate(${angle(P, T)})`}>Soi Ari</text>
 
-      <path d={m.walk.route} className="r-walk" />
+      <path d={WALK} className="r-walk" />
       {m.walk.legs.map((l, i) => {
         const a = points[i], b = l.to, turn = angle(a, b);
         const up = turn > 90 || turn < -90 ? turn + 180 : turn;

@@ -100,7 +100,7 @@ export const bookingMax: Record<Booking, number> = { social: 10, plunge: 2, priv
 // Reception's LINE official account. A link to it with a message opens the chat with the message typed.
 // `demo` keeps the made-up account from ever being opened: LINE opens with the message to share to a
 // chat of the visitor's own choosing instead.
-export const line = { id: '@ronyen', demo: true };
+export const line = { id: '@ronyen.ari', demo: true };
 export const lineMessage = (text: string) => line.demo
   ? `https://line.me/R/share?text=${encodeURIComponent(text)}`
   : `https://line.me/R/oaMessage/${encodeURIComponent(line.id)}/?${encodeURIComponent(text)}`;
@@ -172,7 +172,7 @@ export const findUs = {
     { days: 'Mon–Fri', time: '06:30 – 21:15' },
     { days: 'Sat–Sun', time: '08:00 – 21:15' },
   ],
-  line: '@ronyen.ari',
+  line: line.id,
   station: 'BTS Ari',
   stationCode: 'N5',      // Ari's number on the BTS Sukhumvit line
   lead: 'on foot from BTS Ari',
