@@ -209,7 +209,8 @@ html:has(.loader:not(.is-open)) { overflow: hidden; }
   .plan-pin { align-items: flex-start; padding-top: calc(var(--bar) + 12px); }
   .plan-body { gap: 12px; }
   .plan-cam { height: 48svh; overflow: hidden; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-  .plan-cam .plan-map { transform-origin: 0 0; }
+  /* moved every frame as the frame follows a guest: kept on its own layer so it is not redrawn each time */
+  .plan-cam .plan-map { transform-origin: 0 0; will-change: transform; }
   .plan-hint .w { display: none; }
   .plan-hint .n { display: inline; }
   .plan-map .room text { font-size: 19px; }

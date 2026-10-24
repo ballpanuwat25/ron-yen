@@ -17,6 +17,7 @@ type Options = {
 const HOLD = 4000;      // ms a wiped patch stays clear
 const REFOG = 5000;     // ms for it to fog over again after that
 const CELL = 3;         // CSS px per cell of the wipe mask
+const STEAM = .5;       // the steam's canvas pixels per CSS px: it is soft, so half size is enough
 
 const smooth = (a: number, b: number, x: number) => {
   const k = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -40,6 +41,10 @@ export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSe
   let peak = new Float32Array(0), wipedAt = new Float32Array(0);
   const maskCv = document.createElement('canvas');
   const mctx = maskCv.getContext('2d')!;
+  // the mask softened at its own small size, a cell to a pixel, then stretched over the glass: the same
+  // soft edge as blurring the full-size glass, at a sliver of the cost
+  const softCv = document.createElement('canvas');
+  const soft = softCv.getContext('2d')!;
   let maskImg = mctx.createImageData(1, 1);
   const drips: Drip[] = [];
   let nextDrip = performance.now() + 5000;
@@ -50,7 +55,7 @@ export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSe
     // ResizeObserver builds it again at its real size
     W = Math.max(1, pane.clientWidth); H = Math.max(1, pane.clientHeight);
     fog.width = W * DPR; fog.height = H * DPR;
-    steam.width = hero.clientWidth * DPR; steam.height = hero.clientHeight * DPR;
+    steam.width = Math.ceil(hero.clientWidth * STEAM); steam.height = Math.ceil(hero.clientHeight * STEAM);
 
     // the fog: what the page paints for the view behind the glass, with beads of condensation and a
     // sheen so it reads as glass
@@ -72,11 +77,18 @@ export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSe
     MW = Math.ceil(W / CELL); MH = Math.ceil(H / CELL);
     peak = new Float32Array(MW * MH); wipedAt = new Float32Array(MW * MH).fill(-1e9);
     maskCv.width = MW; maskCv.height = MH;
+    softCv.width = MW; softCv.height = MH;
     maskImg = mctx.createImageData(MW, MH);
     drips.length = 0;
+    settledAt = performance.now() + 100;   // draw the new pane at least once
   }
 
   const clearAt = (i: number, now: number) => peak[i] * (1 - smooth(HOLD, HOLD + REFOG, now - wipedAt[i]));
+  // the glass only needs drawing while it changes: until the last wiped patch has fogged over again and
+  // no drop is running; a still, fogged pane is left as it was drawn
+  let settledAt = 0, dripFrame = false;
+  // a drop alone moves slowly down still glass, so the glass is redrawn for it on every other frame
+  const changing = (now: number) => now < settledAt || (drips.length > 0 && (dripFrame = !dripFrame));
 
   let last: { x: number; y: number } | null = null;
   let lastInput = -1e9;
@@ -90,7 +102,7 @@ export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSe
       if (d >= 1) continue;
       const k = 1 - smooth(.55, 1, d), i = y * MW + x;
       // only where this wipe makes the glass clearer than it is now does the cell start over
-      if (k > clearAt(i, now)) { peak[i] = k; wipedAt[i] = now; }
+      if (k > clearAt(i, now)) { peak[i] = k; wipedAt[i] = now; settledAt = Math.max(settledAt, now + HOLD + REFOG + 100); }
     }
   }
   function wipeTo(x: number, y: number) {
@@ -122,25 +134,32 @@ export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSe
     }, 22);
   }
 
-  function drawFog(now: number, dt: number) {
-    const px = maskImg.data;
-    for (let i = 0; i < peak.length; i++) px[i * 4 + 3] = clearAt(i, now) * 255;
-    mctx.putImageData(maskImg, 0, 0);
-    cx.globalCompositeOperation = 'source-over';
-    cx.clearRect(0, 0, fog.width, fog.height);
-    cx.drawImage(fogTex, 0, 0);
-    cx.globalCompositeOperation = 'destination-out';
-    cx.imageSmoothingQuality = 'high';
-    cx.filter = `blur(${3 * DPR}px)`;
-    cx.drawImage(maskCv, 0, 0, MW * CELL * DPR, MH * CELL * DPR);
-    cx.filter = 'none';
-
+  let fogDt = 0;
+  function drawFog(now: number, frameDt: number) {
     // left alone, now and then a drop runs down the glass on its own, leaving a thin clear line
     if (!reduced && now > nextDrip) {
       drips.push({ pts: [[W * (.08 + Math.random() * .84), H * (.04 + Math.random() * .3)]], v: .8 + Math.random() * .8,
         w: 2.2 + Math.random() * 1.6, slow: .9975, born: now, fade: 1, seed: Math.random() * 9 });
       nextDrip = now + 8000 + Math.random() * 4000;
     }
+    // time since the glass was last drawn, so drops keep their pace when frames are skipped
+    fogDt += frameDt;
+    if (!changing(now)) return;
+    const dt = Math.min(100, fogDt); fogDt = 0;
+    const px = maskImg.data;
+    for (let i = 0; i < peak.length; i++) px[i * 4 + 3] = clearAt(i, now) * 255;
+    mctx.putImageData(maskImg, 0, 0);
+    cx.globalCompositeOperation = 'source-over';
+    cx.clearRect(0, 0, fog.width, fog.height);
+    cx.drawImage(fogTex, 0, 0);
+    soft.clearRect(0, 0, MW, MH);
+    soft.filter = 'blur(1px)';
+    soft.drawImage(maskCv, 0, 0);
+    soft.filter = 'none';
+    cx.globalCompositeOperation = 'destination-out';
+    cx.imageSmoothingQuality = 'high';
+    cx.drawImage(softCv, 0, 0, MW * CELL * DPR, MH * CELL * DPR);
+
     cx.lineCap = 'round';
     for (let i = drips.length - 1; i >= 0; i--) {
       const d = drips[i];
@@ -157,18 +176,19 @@ export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSe
       // a drip is just glass the water washed clear: a soft line, thin where it started and fuller
       // toward where the water still is, with no outline of its own
       const n = d.pts.length, step = Math.max(1, Math.floor(n / 24));
-      cx.strokeStyle = `rgba(0,0,0,${.6 * d.fade})`;
-      cx.filter = `blur(${.6 * DPR}px)`;
+      cx.strokeStyle = `rgba(0,0,0,${.5 * d.fade})`;
       for (let j = step; j < n; j += step) {
         const a0 = d.pts[j - step], a1 = d.pts[Math.min(n - 1, j)];
         cx.lineWidth = d.w * (.3 + .6 * (j / n)) * DPR;
         cx.beginPath(); cx.moveTo(a0[0] * DPR, a0[1] * DPR); cx.lineTo(a1[0] * DPR, a1[1] * DPR); cx.stroke();
       }
-      const [hx, hy] = d.pts[n - 1];
-      cx.filter = `blur(${1.2 * DPR}px)`;
-      cx.fillStyle = `rgba(0,0,0,${.75 * d.fade})`;
-      cx.beginPath(); cx.ellipse(hx * DPR, (hy - d.w * .6) * DPR, d.w * .8 * DPR, d.w * 1.5 * DPR, 0, 0, 7); cx.fill();
-      cx.filter = 'none';
+      // the drop itself, soft at its edge: a gradient rather than a blur filter, which would redraw the
+      // whole glass for every drop
+      const [hx, hy] = d.pts[n - 1], rx = d.w * 1.3 * DPR, cy = (hy - d.w * .6) * DPR;
+      const head = cx.createRadialGradient(hx * DPR, cy, 0, hx * DPR, cy, rx);
+      head.addColorStop(0, `rgba(0,0,0,${.75 * d.fade})`); head.addColorStop(.6, `rgba(0,0,0,${.5 * d.fade})`); head.addColorStop(1, 'rgba(0,0,0,0)');
+      cx.fillStyle = head;
+      cx.beginPath(); cx.ellipse(hx * DPR, cy, rx, rx * 1.6, 0, 0, 7); cx.fill();
     }
   }
 
@@ -194,7 +214,7 @@ export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSe
   function drawSteam(now: number, dt: number) {
     // steam rises off the stones all the time; the pointer never makes it, it only stirs it
     if (!reduced && Math.random() < .12) {
-      puffs.push({ x: steam.width / DPR * Math.random(), y: steam.height / DPR + 40, vx: (Math.random() - .5) * .15, vy: -(.6 + Math.random() * .4),
+      puffs.push({ x: steam.width / STEAM * Math.random(), y: steam.height / STEAM + 40, vx: (Math.random() - .5) * .15, vy: -(.6 + Math.random() * .4),
         r: 60 + Math.random() * 80, grow: .22 + Math.random() * .22, life: 0, max: 6500 + Math.random() * 3000, seed: Math.random() * 99 });
     }
     const stir = ptr.inside && !ptr.onPane && now - ptr.at < 1500;
@@ -202,7 +222,7 @@ export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSe
     // transform would leave a band uncleared, where the steam piles up white
     sx.setTransform(1, 0, 0, 1, 0, 0);
     sx.clearRect(0, 0, steam.width, steam.height);
-    sx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    sx.setTransform(STEAM, 0, 0, STEAM, 0, 0);
     sx.globalCompositeOperation = 'screen';
     for (let i = puffs.length - 1; i >= 0; i--) {
       const p = puffs[i];
@@ -228,14 +248,22 @@ export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSe
     sx.globalAlpha = 1;
   }
 
-  // ---------- one loop for both ----------
-  let prev = performance.now(), raf = 0;
+  // ---------- one loop for both, running only while the hero is on screen ----------
+  let prev = performance.now(), raf = 0, steamDt = 0, odd = false;
   function frame(now: number) {
     const dt = Math.min(50, now - prev); prev = now;
     drawFog(now, dt);
-    drawSteam(now, dt);
+    // steam drifts slowly enough to move on every other frame, which halves its cost
+    steamDt += dt;
+    if ((odd = !odd)) { drawSteam(now, steamDt); steamDt = 0; }
     raf = requestAnimationFrame(frame);
   }
+  const seen = new IntersectionObserver(([e]) => {
+    cancelAnimationFrame(raf);
+    if (!e.isIntersecting) return;
+    prev = performance.now();
+    raf = requestAnimationFrame(frame);
+  });
 
   pane.addEventListener('pointermove', onPaneMove);
   pane.addEventListener('pointerdown', onPaneDown);
@@ -251,12 +279,12 @@ export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSe
   // the fog is painted from the picture behind the glass; paint it again if that picture loads anew
   photo.addEventListener('load', build);
   build();
-  raf = requestAnimationFrame(frame);
+  seen.observe(hero);
   let demoTimer = 0;
   const stopWaiting = whenSeen(() => { demoTimer = window.setTimeout(() => { if (performance.now() - lastInput > 1500) demoWipe(); }, 700); });
 
   return () => {
-    cancelAnimationFrame(raf);
+    cancelAnimationFrame(raf); seen.disconnect();
     stopWaiting(); clearTimeout(demoTimer); clearInterval(demo);
     pane.removeEventListener('pointermove', onPaneMove);
     pane.removeEventListener('pointerdown', onPaneDown);

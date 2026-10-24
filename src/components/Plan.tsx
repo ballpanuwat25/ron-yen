@@ -44,6 +44,11 @@ export default function Plan() {
     let raf = 0, prev = performance.now(), shown = 0, first = true;
     const cam = { x: 0, y: 0, s: 1 }, vel = { x: 0, y: 0, s: 0 };
     const glide: { x: number; y: number }[] = [];
+    // On a phone the frame clips the plan and follows a guest; on a wide screen the whole plan shows. Read
+    // from the stylesheet once and again on a resize, never per frame.
+    let phone = getComputedStyle(frame).overflow === 'hidden';
+    const onResize = () => { phone = getComputedStyle(frame).overflow === 'hidden'; };
+    addEventListener('resize', onResize);
 
     const tick = (now: number) => {
       const dt = Math.min(64, now - prev); prev = now;
@@ -73,7 +78,6 @@ export default function Plan() {
       // On a phone the frame follows the whole-morning guest, who keeps moving through every room to the
       // end, unless another guest has been tapped. On a wide screen the whole plan is in view and the frame
       // never moves.
-      const phone = getComputedStyle(frame).overflow === 'hidden';
       const W = frame.clientWidth, H = frame.clientHeight, unit = W / 1000;
       const aim = [pickRef.current ?? 1];
       let to = { x: 0, y: 0, s: 1 };
@@ -157,8 +161,17 @@ export default function Plan() {
       first = false;
       raf = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    // the loop runs only while the plan is on screen
+    const seen = new IntersectionObserver(([e]) => {
+      cancelAnimationFrame(raf);
+      if (!e.isIntersecting) return;
+      prev = performance.now();
+      raf = requestAnimationFrame(tick);
+    // a section that only touches the window's edge counts as intersecting; the plan sits right below
+    // the hero, so a pixel in keeps it asleep there
+    }, { rootMargin: '-1px 0px' });
+    seen.observe(frame.closest('section') ?? frame);
+    return () => { cancelAnimationFrame(raf); seen.disconnect(); removeEventListener('resize', onResize); };
   }, []);
 
   // Past minute 75 the plan lets go, and the stretch between the end of the clock (stop a) and the top of
