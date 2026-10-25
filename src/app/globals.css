@@ -72,42 +72,68 @@ html:has(.loader:not(.is-open)) { overflow: hidden; }
 .lost-book { font-size: 14px; border-bottom: 1px solid currentColor; }
 
 /* ---------------- hero ---------------- */
-/* the sauna wall, its window cut out; behind the window, the fogged view of the ice */
-.hero { position: relative; height: 100svh; min-height: 640px; overflow: hidden; background: var(--night); }
-.hero-glass { position: absolute; z-index: 1; overflow: hidden; cursor: crosshair; touch-action: none; background: #9aa7b0; }
-.hero-glass img, .hero-glass canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; }
-.hero-glass img { filter: contrast(1.1); }
-.hero-wall, .hero-wall img { position: absolute; inset: 0; width: 100%; height: 100%; }
-.hero-wall { z-index: 2; pointer-events: none; }
-.hero-wall img { object-fit: cover; mask-size: cover; -webkit-mask-size: cover; mask-repeat: no-repeat; -webkit-mask-repeat: no-repeat; }
-.hero-wall-wide { object-position: 72% 50%; mask-position: 72% 50%; -webkit-mask-position: 72% 50%; }
-.hero-wall-tall { object-position: 80% 30%; mask-position: 80% 30%; -webkit-mask-position: 80% 30%; }
-.hero-wall .hero-wall-tall { display: none; }
-/* dimmer where the words are, and toward the floor */
-.hero-shade { position: absolute; inset: 0; z-index: 2; pointer-events: none;
-  background: linear-gradient(90deg, rgba(11, 5, 3, .7) 18%, rgba(11, 5, 3, 0) 50%), linear-gradient(0deg, rgba(11, 5, 3, .75), transparent 45%), linear-gradient(180deg, rgba(11, 5, 3, .5), transparent 18%); }
-.hero-steam { position: absolute; inset: 0; z-index: 3; width: 100%; height: 100%; pointer-events: none; }
+/* the sauna printed in ember, ruled along its own lines (the back wall's edges and the benches' top, set
+   from the picture in Hero.tsx), with a long low window in the back wall onto the fogged ice */
+.hero { --wall-l: 17%; --wall-r: 83%; --bench: 51%; --ink: #fff0e4; --hero-rule: rgba(255, 226, 205, .42);
+  position: relative; height: 100svh; min-height: 640px; overflow: hidden; background: var(--night); }
+.hero-room { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.hero-room-tall { display: none; }
+.hero-steam { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; mix-blend-mode: screen; }
+.hero-rules { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.hero-rules i { position: absolute; background: var(--hero-rule); }
+.hero-rule-top { left: 0; right: 0; top: 72px; height: 1px; }
+.hero-rule-l, .hero-rule-r { top: 72px; bottom: 0; width: 1px; }
+.hero-rule-l { left: var(--wall-l); }
+.hero-rule-r { left: var(--wall-r); }
+.hero-rule-bench { left: 0; right: 0; top: var(--bench); height: 1px; }
+/* the bench rule is a thermometer across the back wall: 88° at the left, 3° at the right */
+.hero-scale { position: absolute; z-index: 3; left: var(--wall-l); width: calc(var(--wall-r) - var(--wall-l)); top: var(--bench); height: 10px; pointer-events: none; }
+.hero-scale i { position: absolute; top: 0; width: 1px; height: 5px; background: var(--hero-rule); }
+.hero-scale i:nth-child(2n + 1) { height: 10px; }
 
-.hero-top { position: relative; z-index: 4; display: flex; align-items: center; gap: 28px; padding: 18px var(--gutter); }
+.hero-top { position: relative; z-index: 5; display: flex; align-items: center; gap: 28px; padding: 18px var(--gutter); }
 .mark { margin-right: auto; font: 600 26px/1 var(--font-mark), var(--thai); }
 .hero-top nav { display: flex; gap: 26px; }
 .hero-top .book { background: var(--cream); color: #2a1008; padding: 9px 16px; font-weight: 500; }
 
-.hero-copy { position: absolute; z-index: 4; left: var(--gutter); bottom: clamp(48px, 9vh, 96px); max-width: 640px; }
-.hero-kicker { margin: 0 0 18px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: rgba(247, 236, 226, .7); }
-.hero h1 { margin: 0; font: 300 clamp(48px, 7.4vw, 112px)/.95 var(--serif); letter-spacing: -.025em; }
-.hero h1 em { color: var(--ice); }
-.hero-text { margin: 22px 0 0; max-width: 28em; font-size: 16px; line-height: 1.55; color: rgba(247, 236, 226, .82); }
-.hero-book { display: inline-flex; margin-top: 26px; padding: 14px 24px; border-radius: 999px; background: var(--ember); color: #1a0a05; font-weight: 600; font-size: 15px; }
-.hero-say { position: absolute; z-index: 4; right: var(--gutter); bottom: 28px; margin: 0; font-size: 12px; letter-spacing: .06em; color: rgba(247, 236, 226, .6); }
+.hero-hot { position: absolute; z-index: 4; left: var(--gutter); top: calc(var(--bench) - 20px); transform: translateY(-100%); margin: 0;
+  display: grid; font-size: 13px; color: rgba(255, 236, 222, .85); }
+.hero-hot span { margin-bottom: 12px; font: 200 clamp(84px, 9.5vw, 168px)/.8 var(--serif); letter-spacing: -.05em; color: var(--ink); }
+.hero-pair { display: none; }
+.hero-where { position: absolute; z-index: 4; left: calc(var(--wall-r) + 20px); top: 92px; margin: 0; font-size: 13px; line-height: 1.45; color: rgba(255, 236, 222, .85); }
+
+/* the window: a dark reveal round the glass, as in a thick wall */
+.hero-window { position: absolute; z-index: 3; box-shadow: 0 0 0 6px #1a0502, 0 0 0 7px var(--hero-rule), 0 30px 80px rgba(0, 0, 0, .5); }
+.hero-glass { position: absolute; inset: 0; overflow: hidden; cursor: crosshair; touch-action: none; background: #6f8ea3; }
+.hero-glass img, .hero-glass canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; }
+.hero-cold { position: absolute; z-index: 2; left: 14px; bottom: 10px; margin: 0; display: flex; align-items: baseline; gap: 10px;
+  font-size: 12px; color: #e8f5fc; pointer-events: none; }
+.hero-cold span { font: 200 clamp(40px, 3.6vw, 64px)/.8 var(--serif); letter-spacing: -.04em; color: #f3fbff; }
+
+.hero-copy { position: absolute; z-index: 4; left: var(--gutter); right: var(--gutter); top: calc(var(--bench) + 32px); bottom: 34px;
+  display: grid; grid-template-columns: 1fr minmax(260px, calc(100% - var(--wall-r) + var(--gutter) - 20px)); align-items: end; gap: 40px; }
+.hero h1 { margin: 0; font: 300 clamp(56px, 7.4vw, 136px)/.88 var(--serif); letter-spacing: -.035em; color: var(--ink); }
+.hero-side { display: grid; gap: 16px; justify-items: start; }
+.hero-side p { margin: 0; font-size: 14px; line-height: 1.5; color: rgba(255, 236, 222, .88); }
+.hero-book { padding: 13px 20px; background: var(--ink); color: #2a0a04; font-weight: 500; font-size: 15px; }
+.hero-side .hero-say { font-size: 12px; letter-spacing: .06em; color: rgba(255, 236, 222, .6); }
 
 @media (max-width: 860px) {
   .hero-top nav { display: none; }
-  .hero-wall .hero-wall-wide { display: none; }
-  .hero-wall .hero-wall-tall { display: block; }
-  .hero-shade { background: linear-gradient(0deg, rgba(11, 5, 3, .92) 30%, rgba(11, 5, 3, 0) 58%), linear-gradient(180deg, rgba(11, 5, 3, .5), transparent 16%); }
-  .hero-say { display: none; }
-  .hero-text { font-size: 15px; }
+}
+@media (max-width: 760px) {
+  .hero-room-wide { display: none; }
+  .hero-room-tall { display: block; }
+  .hero-rule-top { top: 64px; }
+  .hero-rule-l, .hero-rule-r, .hero-where, .hero-cold { display: none; }
+  .hero-scale { left: var(--gutter); width: calc(100% - 2 * var(--gutter)); }
+  .hero-hot { top: 84px; transform: none; }
+  .hero-hot span { font-size: 76px; }
+  .hero-pair { display: grid; left: auto; right: var(--gutter); justify-items: end; text-align: right; color: #d6ecf8; }
+  .hero-pair span { color: #e6f4fc; }
+  .hero-copy { grid-template-columns: 1fr; top: calc(var(--bench) + 26px); gap: 18px; align-content: end; }
+  .hero h1 { font-size: 60px; }
+  .hero-side .hero-say { display: none; }
 }
 
 /* ---------------- the plan: three ways round the studio ---------------- */

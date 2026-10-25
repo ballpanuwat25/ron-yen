@@ -12,6 +12,8 @@ type Options = {
   paintFog: (f: CanvasRenderingContext2D, w: number, h: number, dpr: number) => void;
   // when the page is ready to be looked at, so the first wipe is seen; returns the way to stop waiting
   whenSeen?: (go: () => void) => () => void;
+  // how hot the room is, 0 to 1: how much steam rises off the stones
+  heat?: number;
 };
 
 const HOLD = 4000;      // ms a wiped patch stays clear
@@ -27,7 +29,7 @@ const smooth = (a: number, b: number, x: number) => {
 type Drip = { pts: [number, number][]; v: number; w: number; slow: number; born: number; fade: number; seed: number };
 type Puff = { x: number; y: number; vx: number; vy: number; r: number; grow: number; life: number; max: number; seed: number };
 
-export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSeen = (go) => { go(); return () => {}; } }: Options): () => void {
+export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSeen = (go) => { go(); return () => {}; }, heat = 1 }: Options): () => void {
   const cx = fog.getContext('2d')!;
   const sx = steam.getContext('2d')!;
   const coarse = matchMedia('(pointer: coarse)').matches;
@@ -57,22 +59,14 @@ export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSe
     fog.width = W * DPR; fog.height = H * DPR;
     steam.width = Math.ceil(hero.clientWidth * STEAM); steam.height = Math.ceil(hero.clientHeight * STEAM);
 
-    // the fog: what the page paints for the view behind the glass, with beads of condensation and a
-    // sheen so it reads as glass
+    // the fog: what the page paints for the glass (the view behind it, misted, and the drops on it), with
+    // a sheen so it reads as glass
     fogTex = document.createElement('canvas'); fogTex.width = fog.width; fogTex.height = fog.height;
     const f = fogTex.getContext('2d')!;
     paintFog(f, fogTex.width, fogTex.height, DPR);
     const sheen = f.createLinearGradient(0, 0, fogTex.width * .6, fogTex.height);
     sheen.addColorStop(0, 'rgba(255,236,220,.2)'); sheen.addColorStop(.4, 'rgba(255,236,220,0)');
     f.fillStyle = sheen; f.fillRect(0, 0, fogTex.width, fogTex.height);
-    const beads = Math.round(W * H / 140);
-    for (let i = 0; i < beads; i++) {
-      const x = Math.random() * fogTex.width, y = Math.random() * fogTex.height;
-      const r = (Math.random() ** 3 * 3 + .5) * DPR;
-      const g = f.createRadialGradient(x - r * .3, y - r * .3, 0, x, y, r);
-      g.addColorStop(0, 'rgba(255,244,232,.6)'); g.addColorStop(.7, 'rgba(255,230,210,.14)'); g.addColorStop(1, 'rgba(70,20,8,.28)');
-      f.fillStyle = g; f.beginPath(); f.arc(x, y, r, 0, 7); f.fill();
-    }
 
     MW = Math.ceil(W / CELL); MH = Math.ceil(H / CELL);
     peak = new Float32Array(MW * MH); wipedAt = new Float32Array(MW * MH).fill(-1e9);
@@ -92,8 +86,11 @@ export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSe
 
   let last: { x: number; y: number } | null = null;
   let lastInput = -1e9;
+  // the wipe's radius in CSS px: a fingertip, but never more than a third of the glass, so a narrow pane
+  // takes a few strokes to clear
+  const brush = () => Math.min(coarse ? 36 : 46, H * .3);
   function stamp(px: number, py: number, now: number) {
-    const r = (coarse ? 36 : 46) / CELL;
+    const r = brush() / CELL;
     const c0 = px / CELL, r0 = py / CELL;
     const x0 = Math.max(0, Math.floor(c0 - r)), x1 = Math.min(MW - 1, Math.ceil(c0 + r));
     const y0 = Math.max(0, Math.floor(r0 - r)), y1 = Math.min(MH - 1, Math.ceil(r0 + r));
@@ -113,7 +110,7 @@ export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSe
       const px = from.x + (x - from.x) * i / steps, py = from.y + (y - from.y) * i / steps;
       stamp(px, py, now);
       // water gathers along the bottom of a wipe and now and then runs
-      if (Math.random() < .008) drips.push({ pts: [[px + (Math.random() - .5) * 40, py + 30]], v: .5 + Math.random() * .8, w: 1.6 + Math.random() * 1.2, slow: .99, born: now, fade: 1, seed: Math.random() * 9 });
+      if (Math.random() < .008) drips.push({ pts: [[px + (Math.random() - .5) * 40, py + brush() * .7]], v: .5 + Math.random() * .8, w: 1.6 + Math.random() * 1.2, slow: .99, born: now, fade: 1, seed: Math.random() * 9 });
     }
     last = { x, y }; lastInput = now;
   }
@@ -213,7 +210,7 @@ export function mountHeroGlass({ hero, pane, fog, steam, photo, paintFog, whenSe
 
   function drawSteam(now: number, dt: number) {
     // steam rises off the stones all the time; the pointer never makes it, it only stirs it
-    if (!reduced && Math.random() < .12) {
+    if (!reduced && Math.random() < .12 * heat) {
       puffs.push({ x: steam.width / STEAM * Math.random(), y: steam.height / STEAM + 40, vx: (Math.random() - .5) * .15, vy: -(.6 + Math.random() * .4),
         r: 60 + Math.random() * 80, grow: .22 + Math.random() * .22, life: 0, max: 6500 + Math.random() * 3000, seed: Math.random() * 99 });
     }

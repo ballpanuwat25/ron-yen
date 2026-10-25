@@ -52,12 +52,16 @@ export const nav = [
 ] as const;
 
 export const hero = {
-  kicker: 'Sauna and ice bath · Soi Ari',
-  headline: ['Sweat at 88°.', 'Then the ice.'],
-  text: `Seventy-five minutes, as many rounds as you like. ${walkFromBts} minutes on foot from BTS Ari, open from 06:30.`,
+  headline: ['Hot room,', 'cold tub.'],
+  text: `A sauna at ${studio.sauna.temp}° and four ice baths at ${studio.iceBath.temp}°, ${walkFromBts.toLowerCase()} minutes on foot from BTS Ari. Sessions run 75 minutes, with ten people on the bench.`,
+  hot: 'On the bench',
+  cold: 'In the tubs',
+  opens: `Open from ${studio.opens}`,
   book: 'Book a session',
-  // the first view is the sauna itself, and the ice bath is only ever seen through its window
-  window: { src: '/images/window-floes.webp', width: 1600, height: 1000, alt: 'The ice bath outside the sauna window' } satisfies Photo,
+  // the first view is the sauna itself, printed in ember (scripts/export-photos.py)
+  room: { wide: '/images/sauna-wide.webp', tall: '/images/sauna-tall.webp', alt: 'An empty sauna, benches either side and the stove in the middle' },
+  // the ice is only ever seen through the window in its back wall
+  window: { src: '/images/window-ice.webp', width: 1170, height: 780, alt: 'Crushed ice in the plunge tubs outside', drops: '/images/glass-drops.webp' },
   wipe: { mouse: 'Wipe the window', touch: 'Wipe the window with a finger' },
   // the stones in the ember print, which the footer's steam pane shows on its hot side
   stones: { src: '/images/hero-hot-wide.webp', width: 2000, height: 1250, alt: '' },
@@ -203,5 +207,5 @@ export const foot = {
   words: ['ร้อน', 'เย็น'] as const,
   hours: 'Open daily',
   top: 'Back to the top',
-  note: 'A fictional studio, made as a portfolio piece: the street is real, the studio is not, and nothing on this page books or charges anything. The sauna room in the first view is generated with Gemini; the other photographs are from Unsplash. Map data © OpenStreetMap contributors.',
+  note: 'A fictional studio, made as a portfolio piece: the street is real, the studio is not, and nothing on this page books or charges anything. The photographs are from Unsplash, the sauna by HUUM. Map data © OpenStreetMap contributors.',
 };
